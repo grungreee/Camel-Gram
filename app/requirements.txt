@@ -1,0 +1,8 @@
+customtkinter
+pillow
+aiohttp
+pydantic
+SQLAlchemy
+pydantic-settings
+redis
+fastapi

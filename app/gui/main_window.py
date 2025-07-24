@@ -1,14 +1,16 @@
 import customtkinter as ctk
-import settings
+import app.settings
 from PIL import Image
 from typing import Literal
+from app.gui.auth_controller import handle_register
+import asyncio
 
 
 class MainWindow(ctk.CTk):
     def __init__(self) -> None:
         super().__init__()
 
-        self.title(f"CamelGram {settings.version}")
+        self.title(f"CamelGram {app.settings.version}")
         self.geometry("1000x600")
 
         self.init_auth_window("reg")
@@ -28,9 +30,9 @@ class MainWindow(ctk.CTk):
 
         self.clear_window()
 
-        self.title(f"CamelGram {settings.version} - {"Login" if type_ == "log" else "Register"}")
+        self.title(f"CamelGram {app.settings.version} - {"Login" if type_ == "log" else "Register"}")
 
-        frame_height: int = 190 if type_ == "reg" else 155
+        frame_height: int = 195 if type_ == "reg" else 155
 
         main_frame = ctk.CTkFrame(self, width=300, height=frame_height, fg_color="transparent")
         main_frame.pack_propagate(False)
@@ -50,8 +52,8 @@ class MainWindow(ctk.CTk):
         password_entry = ctk.CTkEntry(password_frame, placeholder_text="Password", show="*")
         password_entry.pack(fill=ctk.BOTH, expand=True, side=ctk.LEFT)
 
-        open_eye_image = ctk.CTkImage(light_image=Image.open("assets/icons/eye_open.png"), size=(21, 21))
-        close_eye_image = ctk.CTkImage(light_image=Image.open("assets/icons/eye_close.png"), size=(21, 21))
+        open_eye_image = ctk.CTkImage(light_image=Image.open("app/assets/icons/eye_open.png"), size=(21, 21))
+        close_eye_image = ctk.CTkImage(light_image=Image.open("app/assets/icons/eye_close.png"), size=(21, 21))
         show_password_button = ctk.CTkButton(password_frame, text="", image=close_eye_image, width=12, border_width=2,
                                              border_color="#545454", fg_color="#353535", hover_color="#444444",
                                              command=change_password_visibility)
@@ -63,7 +65,11 @@ class MainWindow(ctk.CTk):
 
         auth_button = ctk.CTkButton(auth_frame, text="Login" if type_ == "log" else "Register",
                                     width=100, border_width=2, border_color="#545454", fg_color="#353535",
-                                    hover_color="#444444")
+                                    hover_color="#444444", command=lambda: asyncio.run(handle_register(
+                                                                                       username_entry.get(),
+                                                                                       password_entry.get(),
+                                                                                       email_entry.get()))
+                                    if type_ == "reg" else None)
         auth_button.pack(pady=(10, 15), padx=10, anchor=ctk.CENTER)
 
         register_label = ctk.CTkLabel(main_frame, text="Don't have an account? Register here." if type_ == "log" else

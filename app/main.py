@@ -1,4 +1,4 @@
-from app.main_window import MainWindow
+from app.gui.main_window import MainWindow
 
 
 def main() -> None:
