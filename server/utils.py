@@ -1,5 +1,10 @@
 import string
 import re
+import dotenv
+import os
+from aiosmtplib import SMTP
+
+dotenv.load_dotenv("server/.env")
 
 
 def check_all(username: str, password: str, email: str | None = None) -> str | bool:
@@ -32,3 +37,11 @@ def check_all(username: str, password: str, email: str | None = None) -> str | b
             return "Incorrect email"
 
     return True
+
+
+async def send_email(email: str, subject: str, text: str) -> None:
+    smtp = SMTP(hostname="smtp.gmail.com", port=465, use_tls=True)
+    await smtp.connect()
+    await smtp.login(os.getenv("EMAIL_NAME"), os.getenv("EMAIL_PASS"))
+    await smtp.sendmail(os.getenv("EMAIL_NAME"), email, f"Subject: {subject}\n\n{text}")
+    await smtp.quit()

@@ -8,3 +8,5 @@ pydantic
 uvicorn
 redis
 fastapi
+python-dotenv
+aiosmtplib

@@ -7,5 +7,9 @@ class RegisterRequest(BaseModel):
     email: str
 
 
+class VerifyCodeRequest(RegisterRequest):
+    code: str
+
+
 class MessageResponse(BaseModel):
     message: str

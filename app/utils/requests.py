@@ -1,9 +1,11 @@
-import aiohttp
 import app.settings
-from aiohttp import ClientResponse
+import requests as rq
+from json import JSONDecodeError
 
 
-async def make_request(endpoint: str, data: dict) -> ClientResponse:
-    async with aiohttp.ClientSession() as session:
-        async with session.post(f"{app.settings.url}/{endpoint}", json=data) as response:
-            return response.status, await response.json()
+def make_request(endpoint: str, data: dict) -> tuple[int, dict]:
+    response: rq.Response = rq.post(f"{app.settings.url}/{endpoint}", json=data)
+    try:
+        return response.status_code, response.json()
+    except (JSONDecodeError, ValueError):
+        return response.status_code, {}
