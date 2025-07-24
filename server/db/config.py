@@ -7,6 +7,8 @@ class Settings(BaseSettings):
     DB_USER: str
     DB_PASS: str
     DB_NAME: str
+    EMAIL_NAME: str
+    EMAIL_PASS: str
 
     @property
     def database_url_asyncpg(self) -> str:

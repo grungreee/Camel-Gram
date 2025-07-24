@@ -1,8 +1,10 @@
 customtkinter
 pillow
-aiohttp
+requests
 pydantic
 SQLAlchemy
 pydantic-settings
 redis
 fastapi
+python-dotenv
+aiosmtplib
