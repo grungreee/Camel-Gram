@@ -4,7 +4,7 @@ import re
 import threading
 from app.utils.requests import make_request
 from app.gui.context import AppContext
-from tkinter.messagebox import showerror
+from tkinter.messagebox import showerror, showinfo
 
 
 def check_all(username: str, password: str, email: str | None = None) -> str | bool:
@@ -39,7 +39,13 @@ def handle_register(username: str, password: str, email: str) -> None:
     def register() -> None:
         try:
             if not all([username, password, email]):
-                print("All fields must be filled!")
+                showerror("Error", "All fields must be filled!")
+                return
+
+            check_status: bool | str = check_all(username, password, email)
+
+            if check_status is not True:
+                showerror("Error", check_status)
                 return
 
             user: dict = {
@@ -51,11 +57,38 @@ def handle_register(username: str, password: str, email: str) -> None:
             response_status, response = make_request(endpoint="register", data=user)
 
             if response_status == 200:
+                AppContext.main_window.verify_id = response["temp_id"]
                 AppContext.main_window.init_verify_code_window()
+                showinfo("Success", response["message"])
             else:
                 showerror("Error", response["detail"])
-
         except Exception as e:
             showerror(type(e).__name__, f"Error: {str(e)}")
 
     threading.Thread(target=register).start()
+
+
+def handle_verify(code: str) -> None:
+    def verify() -> None:
+        try:
+            if len(code) != 6:
+                showerror("Error", "Invalid verification code")
+                return
+
+            data: dict = {
+                "temp_id": AppContext.main_window.verify_id,
+                "code": code
+            }
+
+            response_status, response = make_request("verify_email", data)
+
+            if response_status == 200:
+                AppContext.main_window.init_auth_window("log")
+                showinfo("Success", response["message"])
+            else:
+                showerror("Error", response["detail"])
+        except Exception as e:
+            showerror(type(e).__name__, f"Error: {str(e)}")
+
+    threading.Thread(target=verify).start()
+

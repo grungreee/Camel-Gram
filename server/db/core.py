@@ -8,11 +8,10 @@ def create_tables() -> None:
     metadata_obj.create_all(sync_engine)
 
 
-def insert_username(username: str, password: str, email: str) -> None:
-    with sync_engine.connect() as conn:
+async def insert_username(username: str, password: str, email: str) -> None:
+    async with async_engine.begin() as conn:
         smtp = users_table.insert().values(username=username, password=password, email=email)
-        conn.execute(smtp)
-        conn.commit()
+        await conn.execute(smtp)
 
 
 async def select_users_fields(*fields: Column[Any]) -> list[str]:
@@ -20,4 +19,6 @@ async def select_users_fields(*fields: Column[Any]) -> list[str]:
         smtp = select(*fields).select_from(users_table)
         result = await conn.execute(smtp)
 
-    return [row[0] for row in result.all()]
+    return result.all()
+
+

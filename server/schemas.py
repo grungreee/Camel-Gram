@@ -1,15 +1,20 @@
 from pydantic import BaseModel
 
 
+class MessageResponse(BaseModel):
+    message: str
+
+
 class RegisterRequest(BaseModel):
     username: str
     password: str
     email: str
 
 
-class VerifyCodeRequest(RegisterRequest):
+class RegisterResponse(MessageResponse):
+    temp_id: str
+
+
+class VerifyCodeRequest(BaseModel):
     code: str
-
-
-class MessageResponse(BaseModel):
-    message: str
+    temp_id: str

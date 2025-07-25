@@ -2,7 +2,7 @@ import customtkinter as ctk
 import app.settings
 from PIL import Image
 from typing import Literal
-from app.gui.auth_controller import handle_register, check_all
+from app.gui.auth_controller import handle_register, check_all, handle_verify
 
 
 class MainWindow(ctk.CTk):
@@ -12,6 +12,7 @@ class MainWindow(ctk.CTk):
         self.username_text: str = ""
         self.password_text: str = ""
         self.email_text: str = ""
+        self.verify_id: str | None = None
 
         self.title_text = f"CamelGram {app.settings.version}"
         self.title(self.title_text)
@@ -37,13 +38,13 @@ class MainWindow(ctk.CTk):
                 show_password_button.configure(image=close_eye_image)
                 password_entry.configure(show="*")
 
-        def username_on_release(event) -> None:
+        def username_on_release(_) -> None:
             self.username_text = username_entry.get()
 
-        def password_on_release(event) -> None:
+        def password_on_release(_) -> None:
             self.password_text = password_entry.get()
 
-        def email_on_release(event) -> None:
+        def email_on_release(_) -> None:
             self.email_text = email_entry.get()
 
         def update_errors():
@@ -122,6 +123,9 @@ class MainWindow(ctk.CTk):
                 if index < len(code_entries) - 1:
                     code_entries[index + 1].focus()
 
+        def get_code() -> str:
+            return "".join([entry.get() for entry in code_entries])
+
         self.clear_window()
 
         self.title(f"{self.title_text} - Verify code")
@@ -155,7 +159,8 @@ class MainWindow(ctk.CTk):
 
             code_entries.append(entry)
 
-        confirm_button = self.styled_button(main_frame, text="Confirm", width=100)
+        confirm_button = self.styled_button(main_frame, text="Confirm", width=100,
+                                            command=lambda: handle_verify(get_code()))
         confirm_button.pack(pady=(10, 15), padx=10, anchor=ctk.CENTER)
 
     def init_main_window(self) -> None:
