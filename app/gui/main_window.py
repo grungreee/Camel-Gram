@@ -2,7 +2,8 @@ import customtkinter as ctk
 import app.settings
 from PIL import Image
 from typing import Literal
-from app.gui.auth_controller import handle_register, check_all, handle_verify
+from app.services.auth_controller import handle_auth, handle_verify
+from app.services.utils import check_all
 
 
 class MainWindow(ctk.CTk):
@@ -17,8 +18,6 @@ class MainWindow(ctk.CTk):
         self.title_text = f"CamelGram {app.settings.version}"
         self.title(self.title_text)
         self.geometry("1000x600")
-
-        self.init_auth_window("reg")
 
     def clear_window(self) -> None:
         for widget in self.winfo_children():
@@ -47,9 +46,9 @@ class MainWindow(ctk.CTk):
         def email_on_release(_) -> None:
             self.email_text = email_entry.get()
 
-        def update_errors():
-            result = check_all(username_entry.get(), password_entry.get(),
-                               email_entry.get() if type_ == "reg" else None)
+        def update_errors() -> None:
+            result = check_all(self.username_text, self.password_text,
+                               self.email_text if type_ == "reg" else None)
             error_label.configure(text="" if result is True else result)
 
         self.clear_window()
@@ -98,8 +97,8 @@ class MainWindow(ctk.CTk):
                 email_entry.insert(0, self.email_text)
 
         auth_button = self.styled_button(auth_frame, text="Login" if type_ == "log" else "Register", width=100,
-                                         command=lambda: handle_register(username_entry.get(), password_entry.get(),
-                                                                         email_entry.get()) if type_ == "reg" else None)
+                                         command=lambda: handle_auth(self.username_text, self.password_text,
+                                                                     self.email_text if type_ == "reg" else None))
         auth_button.pack(pady=(10, 15), padx=10, anchor=ctk.CENTER)
 
         register_label = ctk.CTkLabel(self, text="Don't have an account? Register here." if type_ == "log" else

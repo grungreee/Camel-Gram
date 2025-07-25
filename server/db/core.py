@@ -14,11 +14,20 @@ async def insert_username(username: str, password: str, email: str) -> None:
         await conn.execute(smtp)
 
 
-async def select_users_fields(*fields: Column[Any]) -> list[str]:
+async def select_all_users_fields(*fields: Column[Any]) -> list[tuple[str, str]]:
     async with async_engine.connect() as conn:
         smtp = select(*fields).select_from(users_table)
         result = await conn.execute(smtp)
 
     return result.all()
+
+
+async def get_user_by_username(username: str) -> tuple[str] | None:
+    async with async_engine.connect() as conn:
+        smtp = select(users_table.c.id, users_table.c.password).where(users_table.c.username == username)
+        result = await conn.execute(smtp)
+
+    return result.first()
+
 
 

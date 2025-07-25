@@ -6,5 +6,7 @@ SQLAlchemy
 pydantic-settings
 redis
 fastapi
+python-jose[cryptography]
+keyring
 python-dotenv
 aiosmtplib

@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     DB_NAME: str
     EMAIL_NAME: str
     EMAIL_PASS: str
+    JWT_KEY: str
 
     @property
     def database_url_asyncpg(self) -> str:

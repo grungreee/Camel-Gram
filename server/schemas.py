@@ -5,9 +5,16 @@ class MessageResponse(BaseModel):
     message: str
 
 
-class RegisterRequest(BaseModel):
+class LoginRequest(BaseModel):
     username: str
     password: str
+
+
+class LoginResponse(MessageResponse):
+    token: str
+
+
+class RegisterRequest(LoginRequest):
     email: str
 
 

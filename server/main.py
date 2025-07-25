@@ -1,22 +1,27 @@
-from server.db.core import create_tables, select_users_fields, insert_username
-from server.schemas import RegisterRequest, RegisterResponse, VerifyCodeRequest, MessageResponse
-from server.db.models import users_table
-from server.utils import check_all, send_email
-from redis.asyncio import Redis
-from fastapi import FastAPI, HTTPException
 import random
 import secrets
 import json
+from server.db.core import create_tables, select_all_users_fields, insert_username, get_user_by_username
+from server.schemas import (RegisterRequest, RegisterResponse, VerifyCodeRequest, MessageResponse,
+                            LoginRequest, LoginResponse)
+from server.db.models import users_table
+from server.utils.utils import check_all, send_email
+from server.utils.jwt import create_access_token, verify_access_token
+from redis.asyncio import Redis
+from fastapi import FastAPI, HTTPException, Depends
+from fastapi.security import OAuth2PasswordBearer
+
 
 app = FastAPI()
 redis = Redis(host="localhost", port=6379, decode_responses=True)
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 create_tables()
 
 
 @app.post("/register")
 async def register(user: RegisterRequest) -> RegisterResponse:
-    all_usernames_and_emails: list[tuple] = await select_users_fields(users_table.c.username, users_table.c.email)
+    all_usernames_and_emails: list[tuple] = await select_all_users_fields(users_table.c.username, users_table.c.email)
     usernames: set[str] = {row[0] for row in all_usernames_and_emails}
     emails: set[str] = {row[1] for row in all_usernames_and_emails}
 
@@ -56,18 +61,37 @@ async def verify_email(validation_data: VerifyCodeRequest) -> MessageResponse:
         raise HTTPException(status_code=400, detail="Invalid or expired token.")
 
     session_data: dict[str, str] = json.loads(session_data_raw)
-
-    username: str = session_data["username"]
-    password: str = session_data["password"]
     email: str = session_data["email"]
 
     code = await redis.get(f"verify:{email}")
     if not code or code != validation_data.code:
         raise HTTPException(status_code=400, detail="Invalid code.")
 
-    await insert_username(username, password, email)
+    await insert_username(session_data["username"], session_data["password"], email)
 
     await redis.delete(f"session:{validation_data.temp_id}")
     await redis.delete(f"verify:{email}")
 
     return MessageResponse(message="User registered successfully!")
+
+
+@app.post("/login")
+async def login(user: LoginRequest) -> LoginResponse:
+    user_id, password = await get_user_by_username(user.username)
+
+    if not password or password != user.password:
+        raise HTTPException(status_code=400, detail="Invalid username or password.")
+
+    access_token: str = create_access_token({"user_id": user_id})
+
+    return LoginResponse(token=access_token, message="Login successful!")
+
+
+@app.get("/me")
+async def me(token: str = Depends(oauth2_scheme)) -> dict:
+    payload = verify_access_token(token)
+
+    if not payload:
+        raise HTTPException(status_code=401, detail="Invalid token.")
+
+    return {"user_id": payload["user_id"]}
