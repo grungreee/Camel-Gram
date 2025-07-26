@@ -39,5 +39,6 @@ def get_validation_key() -> str | None:
 def set_validation_key(key: str) -> None:
     keyring.set_password("CamelGram", "access_key", key)
 
+
 def delete_validation_key() -> None:
     keyring.delete_password("CamelGram", "access_key")

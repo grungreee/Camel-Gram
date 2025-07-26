@@ -10,8 +10,8 @@ class MainWindow(ctk.CTk):
     def __init__(self) -> None:
         super().__init__()
 
-        self.username_text: str = ""
-        self.password_text: str = ""
+        self.username_text: str = "grungeee"
+        self.password_text: str = "max09192010"
         self.email_text: str = ""
         self.verify_id: str | None = None
 
