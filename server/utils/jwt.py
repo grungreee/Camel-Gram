@@ -3,7 +3,7 @@ import os
 from jose import JWTError, jwt
 from datetime import datetime, timedelta, UTC
 
-dotenv.load_dotenv(r"C:\Users\PC\PycharmProjects\CamelGram\server\.env")
+dotenv.load_dotenv(r"server\.env")
 
 SECRET_KEY = os.getenv("JWT_KEY")
 
