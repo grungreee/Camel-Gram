@@ -1,7 +1,8 @@
 import random
 import secrets
 import json
-from server.db.core import create_tables, select_all_users_fields, insert_username, get_user_by_username
+from server.db.core import (create_tables, select_all_users_fields, insert_username, get_user_by_username,
+                            get_user_fields_by_id)
 from server.schemas import (RegisterRequest, RegisterResponse, VerifyCodeRequest, MessageResponse,
                             LoginRequest, LoginResponse)
 from server.db.models import users_table
@@ -94,4 +95,6 @@ async def me(token: str = Depends(oauth2_scheme)) -> dict:
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid token.")
 
-    return {"user_id": payload["user_id"]}
+    row: str = await get_user_fields_by_id(payload["user_id"], users_table.c.username)
+
+    return {"username": row[0]}

@@ -22,6 +22,14 @@ async def select_all_users_fields(*fields: Column[Any]) -> list[tuple[str, str]]
     return result.all()
 
 
+async def get_user_fields_by_id(user_id: int, *fields: Column[Any]) -> list[tuple[Any]] | None:
+    async with async_engine.connect() as conn:
+        smtp = select(*fields).select_from(users_table).where(users_table.c.id == user_id)
+        result = await conn.execute(smtp)
+
+    return result.first()
+
+
 async def get_user_by_username(username: str) -> tuple[str] | None:
     async with async_engine.connect() as conn:
         smtp = select(users_table.c.id, users_table.c.password).where(users_table.c.username == username)

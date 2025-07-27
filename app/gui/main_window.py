@@ -10,6 +10,8 @@ class MainWindow(ctk.CTk):
     def __init__(self) -> None:
         super().__init__()
 
+        self.left_side: ctk.CTkFrame | None = None
+
         self.username_text: str = ""
         self.password_text: str = ""
         self.email_text: str = ""
@@ -167,10 +169,53 @@ class MainWindow(ctk.CTk):
 
         self.title(self.title_text)
 
-        left_side = ctk.CTkFrame(self, width=250, corner_radius=0)
-        left_side.pack_propagate(False)
-        left_side.pack(side=ctk.LEFT, fill=ctk.Y)
+        self.left_side = ctk.CTkFrame(self, width=250, corner_radius=0)
+        self.left_side.pack_propagate(False)
+        self.left_side.pack(side=ctk.LEFT, fill=ctk.Y)
+
+        self.init_main_left_side()
 
         right_side = ctk.CTkFrame(self, corner_radius=0, fg_color="transparent")
         right_side.pack_propagate(False)
         right_side.pack(side=ctk.RIGHT, fill=ctk.BOTH, expand=True)
+
+    def clear_left_side(self) -> None:
+        for widget in self.left_side.winfo_children():
+            widget.destroy()
+
+    def init_main_left_side(self) -> None:
+        self.clear_left_side()
+
+        upper_left_frame = ctk.CTkFrame(self.left_side, corner_radius=0, height=50)
+        upper_left_frame.pack_propagate(False)
+        upper_left_frame.pack(fill=ctk.X)
+
+        burger_menu_image = ctk.CTkImage(light_image=Image.open("app/assets/icons/burger_menu.png"), size=(18, 13))
+        open_side_menu_button = self.styled_button(upper_left_frame, text="", image=burger_menu_image,
+                                                   width=40, height=30, corner_radius=5, command=self.init_side_menu)
+        open_side_menu_button.pack(side=ctk.LEFT, padx=(10, 0))
+
+        search_entry = ctk.CTkEntry(upper_left_frame, placeholder_text="Search", height=30)
+        search_entry.pack(side=ctk.RIGHT, padx=10, fill=ctk.X, expand=True)
+
+        bottom_left_frame = ctk.CTkFrame(self.left_side, corner_radius=0, fg_color="transparent")
+        bottom_left_frame.pack_propagate(False)
+        bottom_left_frame.pack(fill=ctk.BOTH, expand=True)
+
+        ctk.CTkLabel(bottom_left_frame, text="You dont have chats.",
+                     font=("Arial", 15, "bold")).place(relx=0.5, rely=0.5, anchor=ctk.CENTER)
+
+    def init_side_menu(self) -> None:
+        self.clear_left_side()
+
+        upper_left_frame = ctk.CTkFrame(self.left_side, corner_radius=0, height=50)
+        upper_left_frame.pack_propagate(False)
+        upper_left_frame.pack(fill=ctk.X)
+
+        back_button = self.styled_button(upper_left_frame, text="<-- Back", height=30, width=50,
+                                         command=self.init_main_left_side)
+        back_button.pack(padx=10, side=ctk.LEFT)
+
+        account = app.settings.account_data["username"]
+        account_label = ctk.CTkLabel(self.left_side, text=f"Account: {account}", font=("Arial", 15, "bold"))
+        account_label.pack(pady=(10, 0), padx=10)

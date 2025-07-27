@@ -1,4 +1,5 @@
 import threading
+import app.settings
 from app.services.requests import make_request
 from app.gui.context import AppContext
 from tkinter.messagebox import showerror, showinfo
@@ -80,11 +81,14 @@ def check_validation() -> None:
     else:
         data: dict = {"Authorization": f"Bearer {token}"}
 
-        response_status, response = make_request(method="get", endpoint="me", data=data)
+        response_status, response = make_request(method="get", endpoint="me", data=data, with_loading_window=False)
 
         if response_status == 200:
+            app.settings.account_data = response
             AppContext.main_window.init_main_window()
-        else:
+        elif response_status != 0:
             AppContext.main_window.init_auth_window("log")
             delete_validation_key()
             showinfo("Info", "You are not authorized. Please log in.")
+        else:
+            AppContext.main_window.destroy()
