@@ -3,6 +3,7 @@ import app.settings
 from PIL import Image
 from typing import Literal
 from app.services.auth_controller import handle_auth, handle_verify
+from app.services.websocket_client import WebSocketClient
 from app.services.utils import check_all
 
 
@@ -16,6 +17,8 @@ class MainWindow(ctk.CTk):
         self.password_text: str = ""
         self.email_text: str = ""
         self.verify_id: str | None = None
+
+        self.ws_client = WebSocketClient()
 
         self.title_text = f"CamelGram {app.settings.version}"
         self.title(self.title_text)
@@ -178,6 +181,12 @@ class MainWindow(ctk.CTk):
         right_side = ctk.CTkFrame(self, corner_radius=0, fg_color="transparent")
         right_side.pack_propagate(False)
         right_side.pack(side=ctk.RIGHT, fill=ctk.BOTH, expand=True)
+
+        def foo():
+            self.ws_client.send({"type": "ping"})
+
+        send_button = ctk.CTkButton(right_side, text="Ping websocket", command=foo)
+        send_button.place(rely=0.5, relx=0.5)
 
     def clear_left_side(self) -> None:
         for widget in self.left_side.winfo_children():

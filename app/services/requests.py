@@ -3,17 +3,27 @@ import requests as rq
 from json import JSONDecodeError
 from typing import Literal
 from tkinter.messagebox import showerror
+from app.services.utils import get_validation_key
 from app.gui.context import AppContext
 
 
 def make_request(method: Literal["get", "post"], endpoint: str, data: dict,
-                 with_loading_window: bool = True) -> tuple[int, dict]:
+                 with_loading_window: bool = True, with_token: bool = False) -> tuple[int, dict]:
     if with_loading_window:
         AppContext.loading_window.start_loading()
 
+    url: str = f"http://{app.settings.url}/{endpoint}"
+
     try:
-        response: rq.Response = rq.post(f"{app.settings.url}/{endpoint}", json=data) if method == "post" else (
-                                rq.get(f"{app.settings.url}/{endpoint}", headers=data))
+        if with_token:
+            token: str | None = get_validation_key()
+
+            if not token:
+                return 0, {}
+
+            data["Authorisation"] = f"Bearer {token}"
+
+        response: rq.Response = rq.post(url, json=data) if method == "post" else rq.get(url, headers=data)
 
         if with_loading_window:
             AppContext.loading_window.finish_loading()

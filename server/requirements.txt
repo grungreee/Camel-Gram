@@ -7,6 +7,6 @@ pydantic-settings
 pydantic
 uvicorn
 redis
-fastapi
+fastapi[standard]
 python-dotenv
 aiosmtplib

@@ -38,6 +38,7 @@ def handle_auth(username: str, password: str, email: str | None = None) -> None:
                     AppContext.main_window.init_verify_code_window()
                 else:
                     set_validation_key(response["token"])
+                    check_validation()
                     AppContext.main_window.init_main_window()
                 showinfo("Success", response["message"])
             elif response_status != 0:
@@ -77,18 +78,19 @@ def check_validation() -> None:
     token: str | None = get_validation_key()
 
     if not token:
-        AppContext.main_window.init_auth_window("reg")
+        return
+
+    data: dict = {"Authorization": f"Bearer {token}"}
+
+    response_status, response = make_request(method="get", endpoint="me", data=data)
+
+    if response_status == 200:
+        app.settings.account_data = response
+        AppContext.main_window.ws_client.connect()
+        AppContext.main_window.init_main_window()
+    elif response_status != 0:
+        AppContext.main_window.init_auth_window("log")
+        delete_validation_key()
+        showinfo("Info", "You are not authorized. Please log in.")
     else:
-        data: dict = {"Authorization": f"Bearer {token}"}
-
-        response_status, response = make_request(method="get", endpoint="me", data=data, with_loading_window=False)
-
-        if response_status == 200:
-            app.settings.account_data = response
-            AppContext.main_window.init_main_window()
-        elif response_status != 0:
-            AppContext.main_window.init_auth_window("log")
-            delete_validation_key()
-            showinfo("Info", "You are not authorized. Please log in.")
-        else:
-            AppContext.main_window.destroy()
+        AppContext.main_window.destroy()

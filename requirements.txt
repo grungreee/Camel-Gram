@@ -5,8 +5,9 @@ pydantic
 SQLAlchemy
 pydantic-settings
 redis
-fastapi
+fastapi[standard]
 python-jose[cryptography]
 keyring
 python-dotenv
 aiosmtplib
+websocket-client
