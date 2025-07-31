@@ -1,5 +1,7 @@
 import app.settings
 import requests as rq
+import time
+import random
 from json import JSONDecodeError
 from typing import Literal
 from tkinter.messagebox import showerror
@@ -11,6 +13,8 @@ def make_request(method: Literal["get", "post"], endpoint: str, data: dict,
                  with_loading_window: bool = True, with_token: bool = False) -> tuple[int, dict]:
     if with_loading_window:
         AppContext.loading_window.start_loading()
+
+    time_ = time.time()
 
     url: str = f"http://{app.settings.url}/{endpoint}"
 
@@ -26,6 +30,9 @@ def make_request(method: Literal["get", "post"], endpoint: str, data: dict,
         response: rq.Response = rq.post(url, json=data) if method == "post" else rq.get(url, headers=data)
 
         if with_loading_window:
+            while time.time() - time_ < random.uniform(0.5, 1.0):
+                time.sleep(0.03)
+
             AppContext.loading_window.finish_loading()
 
         try:
@@ -34,6 +41,9 @@ def make_request(method: Literal["get", "post"], endpoint: str, data: dict,
             return response.status_code, {}
     except rq.exceptions.ConnectionError:
         if with_loading_window:
+            while time.time() - time_ < random.uniform(0.5, 1.0):
+                time.sleep(0.03)
+
             AppContext.loading_window.finish_loading()
 
         showerror("Error", "Server is not available. Please try again later.")

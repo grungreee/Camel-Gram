@@ -19,7 +19,7 @@ class AppContext:
 
     @ClassProperty
     def loading_window(self) -> "LoadingWindow":
-        if self._loading_window is None:
+        if self._loading_window is None or not self._loading_window.winfo_exists():
             from app.gui.loading_window import init_loading_window
             init_loading_window()
         return self._loading_window

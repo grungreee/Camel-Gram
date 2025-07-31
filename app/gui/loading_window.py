@@ -30,11 +30,12 @@ class LoadingWindow(ctk.CTkToplevel):
         self.geometry(f"+{x}+{y}")
 
     def start_loading(self) -> None:
-        self.bind("<Configure>", self.set_geometry)
-        self.attributes("-topmost", True)
-        self.start_loading_animation()
+        if self.winfo_exists():
+            self.bind("<Configure>", self.set_geometry)
+            self.attributes("-topmost", True)
+            self.start_loading_animation()
 
-        self.deiconify()
+            self.deiconify()
 
     def animate_loading(self) -> None:
         if not self.stop_flag:
@@ -51,9 +52,10 @@ class LoadingWindow(ctk.CTkToplevel):
 
     def finish_loading(self) -> None:
         self.stop_flag = True
-        self.withdraw()
+
+        if self.winfo_exists():
+            self.withdraw()
 
 
 def init_loading_window() -> None:
-    loading_window = LoadingWindow(root=AppContext.main_window)
-    AppContext._loading_window = loading_window
+    AppContext._loading_window = LoadingWindow(root=AppContext.main_window)

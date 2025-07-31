@@ -8,7 +8,7 @@ def main() -> None:
     window = MainWindow()
     AppContext.main_window = window
 
-    window.after(0, lambda: threading.Thread(target=check_validation, daemon=True).start())
+    window.after(100, lambda: threading.Thread(target=check_validation, daemon=True).start())
 
     window.mainloop()
 
