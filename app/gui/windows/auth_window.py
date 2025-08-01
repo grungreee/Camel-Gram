@@ -6,18 +6,18 @@ from app.services.auth_controller import handle_auth
 from app.services.utils import check_all
 
 if TYPE_CHECKING:
-    from app.gui.main_window import MainWindow
+    from app.gui.main_root import MainRoot
 
 
 class AuthWindow(ctk.CTkFrame):
-    def __init__(self, parent: "MainWindow"):
+    def __init__(self, parent: "MainRoot", username_text: str = "", password_text: str = "", email_text: str = ""):
         super().__init__(parent)
 
-        self.parent: "MainWindow" = parent
+        self.parent: "MainRoot" = parent
 
-        self.username_text: str = ""
-        self.password_text: str = ""
-        self.email_text: str = ""
+        self.username_text: str = username_text
+        self.password_text: str = password_text
+        self.email_text: str = email_text
 
     def setup_auth_ui(self, auth_type: Literal["reg", "log"]):
         def change_password_visibility() -> None:
@@ -28,19 +28,22 @@ class AuthWindow(ctk.CTkFrame):
                 show_password_button.configure(image=close_eye_image)
                 password_entry.configure(show="*")
 
-        def username_on_release(_) -> None:
+        def username_on_release() -> None:
             self.username_text = username_entry.get()
 
-        def password_on_release(_) -> None:
+        def password_on_release() -> None:
             self.password_text = password_entry.get()
 
-        def email_on_release(_) -> None:
+        def email_on_release() -> None:
             self.email_text = email_entry.get()
 
         def update_errors() -> None:
             result = check_all(self.username_text, self.password_text,
                                self.email_text if auth_type == "reg" else None)
             error_label.configure(text="" if result is True else result)
+
+        def confirm() -> None:
+            handle_auth(self.username_text, self.password_text, self.email_text if auth_type == "reg" else None)
 
         self.parent.title(f"{self.parent.title_text} - {"Login" if auth_type == "log" else "Register"}")
 
@@ -55,7 +58,7 @@ class AuthWindow(ctk.CTkFrame):
 
         username_entry = ctk.CTkEntry(auth_frame, placeholder_text="Username")
         username_entry.pack(pady=(15, 0), padx=10, anchor=ctk.W, fill=ctk.X)
-        username_entry.bind("<KeyRelease>", lambda e: (username_on_release(e), update_errors()))
+        username_entry.bind("<KeyRelease>", lambda _: (username_on_release(), update_errors()))
 
         if self.username_text:
             username_entry.insert(0, self.username_text)
@@ -66,7 +69,9 @@ class AuthWindow(ctk.CTkFrame):
 
         password_entry = ctk.CTkEntry(password_frame, placeholder_text="Password", show="*")
         password_entry.pack(fill=ctk.BOTH, expand=True, side=ctk.LEFT)
-        password_entry.bind("<KeyRelease>", lambda e: (password_on_release(e), update_errors()))
+        password_entry.bind("<KeyRelease>", lambda _: (password_on_release(), update_errors()))
+
+        username_entry.bind("<Return>", lambda _: password_entry.focus())
 
         if self.password_text:
             password_entry.insert(0, self.password_text)
@@ -80,16 +85,18 @@ class AuthWindow(ctk.CTkFrame):
         if auth_type == "reg":
             email_entry = ctk.CTkEntry(auth_frame, placeholder_text="Email")
             email_entry.pack(pady=(10, 0), padx=10, anchor=ctk.W, fill=ctk.X)
-            email_entry.bind("<KeyRelease>", lambda e: (email_on_release(e), update_errors()))
+            email_entry.bind("<KeyRelease>", lambda _: (email_on_release(), update_errors()))
+            email_entry.bind("<Return>", lambda _: confirm())
+
+            password_entry.bind("<Return>", lambda _: email_entry.focus())
 
             if self.email_text:
                 email_entry.insert(0, self.email_text)
+        else:
+            password_entry.bind("<Return>", lambda _: confirm())
 
         auth_button = self.parent.styled_button(auth_frame, text="Login" if auth_type == "log" else "Register",
-                                                width=100,
-                                                command=lambda: handle_auth(self.username_text, self.password_text,
-                                                                            self.email_text if auth_type == "reg"
-                                                                            else None))
+                                                width=100, command=confirm)
         auth_button.pack(pady=(10, 15), padx=10, anchor=ctk.CENTER)
 
         auth_text: str = "Don't have an account? Register here." if auth_type == "log" else \
@@ -99,4 +106,5 @@ class AuthWindow(ctk.CTkFrame):
         auth_label.place(relx=0.5, rely=0.5, anchor=ctk.N, y=(frame_height // 2 + 5))
 
         state: WindowState = WindowState.AUTH_REGISTER if auth_type == "log" else WindowState.AUTH_LOGIN
-        auth_label.bind("<Button-1>", lambda _: self.parent.navigation.navigate_to(state))
+        auth_label.bind("<Button-1>", lambda _: self.parent.navigation.navigate_to(state, self.username_text,
+                                                                                   self.password_text, self.email_text))

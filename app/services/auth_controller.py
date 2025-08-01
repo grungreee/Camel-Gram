@@ -5,7 +5,7 @@ from app.gui.context import AppContext
 from tkinter.messagebox import showerror, showinfo
 from app.services.utils import check_all, hash_password
 from app.gui.navigation_controller import WindowState
-from app.services.utils import set_validation_key, get_validation_key, delete_validation_key
+from app.services.utils import set_validation_key, delete_validation_key
 
 
 def handle_auth(username: str, password: str, email: str | None = None) -> None:
@@ -76,22 +76,17 @@ def handle_verify(code: str) -> None:
 
 
 def check_validation() -> None:
-    token: str | None = get_validation_key()
-
-    if not token:
-        return
-
-    data: dict = {"Authorization": f"Bearer {token}"}
-
-    response_status, response = make_request(method="get", endpoint="me", data=data)
+    response_status, response = make_request(method="get", endpoint="me", with_token=True)
 
     if response_status == 200:
         app.settings.account_data = response
         AppContext.main_window.ws_client.connect()
         AppContext.main_window.navigation.navigate_to(WindowState.MAIN_CHAT)
-    elif response_status != 0:
+    elif response_status == 401:
         AppContext.main_window.navigation.navigate_to(WindowState.AUTH_LOGIN)
-        delete_validation_key()
         showinfo("Info", "You are not authorized. Please log in.")
+        delete_validation_key()
+    elif response_status == 1:
+        AppContext.main_window.navigation.navigate_to(WindowState.AUTH_REGISTER)
     else:
         AppContext.main_window.destroy()

@@ -1,8 +1,8 @@
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from app.gui.main_window import MainWindow
-    from app.gui.loading_window import LoadingWindow
+    from app.gui.main_root import MainRoot
+    from app.gui.windows.loading_window import LoadingWindow
 
 
 class ClassProperty:
@@ -14,12 +14,12 @@ class ClassProperty:
 
 
 class AppContext:
-    main_window: "MainWindow" = None
+    main_window: "MainRoot" = None
     _loading_window: "LoadingWindow" = None
 
     @ClassProperty
     def loading_window(self) -> "LoadingWindow":
         if self._loading_window is None or not self._loading_window.winfo_exists():
-            from app.gui.loading_window import init_loading_window
+            from app.gui.windows.loading_window import init_loading_window
             init_loading_window()
         return self._loading_window

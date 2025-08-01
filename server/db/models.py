@@ -8,6 +8,7 @@ users_table = Table(
     metadata_obj,
     Column("id", Integer, primary_key=True),
     Column("username", String),
+    Column("display_name", String),
     Column("password", String),
     Column("email", String),
 )

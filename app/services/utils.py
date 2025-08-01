@@ -2,8 +2,6 @@ import hashlib
 import string
 import re
 import keyring
-from app.gui.context import AppContext
-from tkinter.messagebox import showerror
 
 
 def check_all(username: str, password: str, email: str | None = None) -> str | bool:
@@ -35,13 +33,7 @@ def hash_password(password: str) -> str:
 
 
 def get_validation_key() -> str | None:
-    token: str | None = keyring.get_password("CamelGram", "access_key")
-
-    if token is None:
-        AppContext.main_window.init_auth_window("reg")
-        showerror("Error", "You are not authorized. Please log in.")
-
-    return token
+    return keyring.get_password("CamelGram", "access_key")
 
 
 def set_validation_key(key: str) -> None:

@@ -1,11 +1,11 @@
-from app.gui.main_window import MainWindow
+from app.gui.main_root import MainRoot
 from app.gui.context import AppContext
 from app.services.auth_controller import check_validation
 import threading
 
 
 def main() -> None:
-    window = MainWindow()
+    window = MainRoot()
     AppContext.main_window = window
 
     window.after(100, lambda: threading.Thread(target=check_validation, daemon=True).start())

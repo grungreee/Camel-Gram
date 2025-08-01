@@ -38,4 +38,12 @@ async def get_user_by_username(username: str) -> tuple[str] | None:
     return result.first()
 
 
+async def search_username(text: str) -> list[tuple[str]] | None:
+    async with async_engine.connect() as conn:
+        smtp = select(
+            users_table.c.username,
+            users_table.c.display_name
+        ).where(users_table.c.username.like(f'%{text}%'))
+        result = await conn.execute(smtp)
 
+    return result.all()

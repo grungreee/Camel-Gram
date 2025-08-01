@@ -13,11 +13,11 @@ class NavigationController:
         self.main_window = main_window
         self.current_state = None
 
-    def navigate_to(self, state: WindowState):
+    def navigate_to(self, state: WindowState, *args):
         if state == WindowState.AUTH_LOGIN:
-            self.main_window.show_auth_window("log")
+            self.main_window.show_auth_window("log", *args)
         elif state == WindowState.AUTH_REGISTER:
-            self.main_window.show_auth_window("reg")
+            self.main_window.show_auth_window("reg", *args)
         elif state == WindowState.VERIFY:
             self.main_window.show_verify_window()
         elif state == WindowState.MAIN_CHAT:

@@ -7,7 +7,7 @@ from app.services.websocket_client import WebSocketClient
 from app.gui.navigation_controller import NavigationController
 
 
-class MainWindow(ctk.CTk):
+class MainRoot(ctk.CTk):
     def __init__(self):
         super().__init__()
 
@@ -27,9 +27,9 @@ class MainWindow(ctk.CTk):
         return ctk.CTkButton(parent, border_width=2, border_color="#545454", fg_color="#353535",
                              hover_color="#444444", **kwargs)
 
-    def show_auth_window(self, auth_type):
+    def show_auth_window(self, auth_type, *args):
         self.clear_window()
-        self.auth_window = AuthWindow(self)
+        self.auth_window = AuthWindow(self, *args)
         self.auth_window.pack(fill="both", expand=True)
         self.auth_window.setup_auth_ui(auth_type)
 

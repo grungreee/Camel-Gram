@@ -5,14 +5,14 @@ from app.services.auth_controller import handle_verify
 from app.gui.navigation_controller import WindowState
 
 if TYPE_CHECKING:
-    from app.gui.main_window import MainWindow
+    from app.gui.main_root import MainRoot
 
 
 class VerifyWindow(ctk.CTkFrame):
-    def __init__(self, parent: "MainWindow"):
+    def __init__(self, parent: "MainRoot"):
         super().__init__(parent)
 
-        self.parent: "MainWindow" = parent
+        self.parent: "MainRoot" = parent
         self.verify_id: int | None = None
 
     def setup_verify_ui(self):

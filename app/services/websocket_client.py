@@ -11,8 +11,6 @@ class WebSocketClient:
 
         self.ws = WebSocketApp(
             url=f"ws://{app.settings.url}/ws",
-            on_open=lambda _: print("ws open"),
-            on_close=lambda ws, status, msg: print("ws close"),
             on_message=self.on_message
         )
 

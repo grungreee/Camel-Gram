@@ -5,9 +5,13 @@ pydantic
 SQLAlchemy
 pydantic-settings
 redis
+uvicorn
 fastapi[standard]
 python-jose[cryptography]
 keyring
 python-dotenv
 aiosmtplib
 websocket-client
+asyncpg
+psycopg
+alembic
