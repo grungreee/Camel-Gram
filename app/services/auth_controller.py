@@ -4,6 +4,7 @@ from app.services.requests import make_request
 from app.gui.context import AppContext
 from tkinter.messagebox import showerror, showinfo
 from app.services.utils import check_all, hash_password
+from app.gui.navigation_controller import WindowState
 from app.services.utils import set_validation_key, get_validation_key, delete_validation_key
 
 
@@ -34,12 +35,12 @@ def handle_auth(username: str, password: str, email: str | None = None) -> None:
         try:
             if response_status == 200:
                 if email is not None:
-                    AppContext.main_window.verify_id = response["temp_id"]
-                    AppContext.main_window.init_verify_code_window()
+                    AppContext.main_window.verify_window.verify_id = response["temp_id"]
+                    AppContext.main_window.navigation.navigate_to(WindowState.VERIFY)
                 else:
                     set_validation_key(response["token"])
                     check_validation()
-                    AppContext.main_window.init_main_window()
+                    AppContext.main_window.navigation.navigate_to(WindowState.MAIN_CHAT)
                 showinfo("Success", response["message"])
             elif response_status != 0:
                 showerror("Error", response["detail"])
@@ -56,7 +57,7 @@ def handle_verify(code: str) -> None:
             return
 
         data: dict = {
-            "temp_id": AppContext.main_window.verify_id,
+            "temp_id": AppContext.main_window.verify_window.verify_id,
             "code": code
         }
 
@@ -64,7 +65,7 @@ def handle_verify(code: str) -> None:
 
         try:
             if response_status == 200:
-                AppContext.main_window.init_auth_window("log")
+                AppContext.main_window.navigation.navigate_to(WindowState.AUTH_LOGIN)
                 showinfo("Success", response["message"])
             else:
                 showerror("Error", response["detail"])
@@ -87,9 +88,9 @@ def check_validation() -> None:
     if response_status == 200:
         app.settings.account_data = response
         AppContext.main_window.ws_client.connect()
-        AppContext.main_window.init_main_window()
+        AppContext.main_window.navigation.navigate_to(WindowState.MAIN_CHAT)
     elif response_status != 0:
-        AppContext.main_window.init_auth_window("log")
+        AppContext.main_window.navigation.navigate_to(WindowState.AUTH_LOGIN)
         delete_validation_key()
         showinfo("Info", "You are not authorized. Please log in.")
     else:
