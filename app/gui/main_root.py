@@ -27,15 +27,15 @@ class MainRoot(ctk.CTk):
         return ctk.CTkButton(parent, border_width=2, border_color="#545454", fg_color="#353535",
                              hover_color="#444444", **kwargs)
 
-    def show_auth_window(self, auth_type, *args):
+    def show_auth_window(self, auth_type, **kwargs):
         self.clear_window()
-        self.auth_window = AuthWindow(self, *args)
+        self.auth_window = AuthWindow(self, **kwargs)
         self.auth_window.pack(fill="both", expand=True)
         self.auth_window.setup_auth_ui(auth_type)
 
-    def show_verify_window(self):
+    def show_verify_window(self, **kwargs):
         self.clear_window()
-        self.verify_window = VerifyWindow(self)
+        self.verify_window = VerifyWindow(self, **kwargs)
         self.verify_window.pack(fill="both", expand=True)
         self.verify_window.setup_verify_ui()
 

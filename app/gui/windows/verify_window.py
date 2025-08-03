@@ -9,11 +9,11 @@ if TYPE_CHECKING:
 
 
 class VerifyWindow(ctk.CTkFrame):
-    def __init__(self, parent: "MainRoot"):
+    def __init__(self, parent: "MainRoot", verify_id: str):
         super().__init__(parent)
 
         self.parent: "MainRoot" = parent
-        self.verify_id: int | None = None
+        self.verify_id: str = verify_id
 
     def setup_verify_ui(self):
         def validate_input(value: str) -> bool:

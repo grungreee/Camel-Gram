@@ -10,14 +10,14 @@ if TYPE_CHECKING:
 
 
 class AuthWindow(ctk.CTkFrame):
-    def __init__(self, parent: "MainRoot", username_text: str = "", password_text: str = "", email_text: str = ""):
+    def __init__(self, parent: "MainRoot", username: str = "", password: str = "", email: str = ""):
         super().__init__(parent)
 
         self.parent: "MainRoot" = parent
 
-        self.username_text: str = username_text
-        self.password_text: str = password_text
-        self.email_text: str = email_text
+        self.username_text: str = username
+        self.password_text: str = password
+        self.email_text: str = email
 
     def setup_auth_ui(self, auth_type: Literal["reg", "log"]):
         def change_password_visibility() -> None:
@@ -106,5 +106,6 @@ class AuthWindow(ctk.CTkFrame):
         auth_label.place(relx=0.5, rely=0.5, anchor=ctk.N, y=(frame_height // 2 + 5))
 
         state: WindowState = WindowState.AUTH_REGISTER if auth_type == "log" else WindowState.AUTH_LOGIN
-        auth_label.bind("<Button-1>", lambda _: self.parent.navigation.navigate_to(state, self.username_text,
-                                                                                   self.password_text, self.email_text))
+        auth_label.bind("<Button-1>", lambda _:
+                        self.parent.navigation.navigate_to(state, username=self.username_text,
+                                                           password=self.password_text, email=self.email_text))

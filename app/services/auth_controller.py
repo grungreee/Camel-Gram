@@ -2,7 +2,7 @@ import threading
 import app.settings
 from app.services.requests import make_request
 from app.gui.context import AppContext
-from tkinter.messagebox import showerror, showinfo
+from tkinter.messagebox import showerror, showinfo, askyesno
 from app.services.utils import check_all, hash_password
 from app.gui.navigation_controller import WindowState
 from app.services.utils import set_validation_key, delete_validation_key
@@ -35,8 +35,7 @@ def handle_auth(username: str, password: str, email: str | None = None) -> None:
         try:
             if response_status == 200:
                 if email is not None:
-                    AppContext.main_window.verify_window.verify_id = response["temp_id"]
-                    AppContext.main_window.navigation.navigate_to(WindowState.VERIFY)
+                    AppContext.main_window.navigation.navigate_to(WindowState.VERIFY, verify_id=response["temp_id"])
                 else:
                     set_validation_key(response["token"])
                     check_validation()
@@ -90,3 +89,11 @@ def check_validation() -> None:
         AppContext.main_window.navigation.navigate_to(WindowState.AUTH_REGISTER)
     else:
         AppContext.main_window.destroy()
+
+
+def handle_logout() -> None:
+    if askyesno("Confirm", "Are you sure you want to log out?"):
+        AppContext.main_window.ws_client.close()
+        AppContext.main_window.navigation.navigate_to(WindowState.AUTH_LOGIN)
+        delete_validation_key()
+        app.settings.account_data = None

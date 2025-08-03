@@ -25,3 +25,7 @@ class RegisterResponse(MessageResponse):
 class VerifyCodeRequest(BaseModel):
     code: str
     temp_id: str
+
+
+class DisplayNameChangeRequest(BaseModel):
+    display_name: str

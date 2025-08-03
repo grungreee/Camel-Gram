@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException
 from server.schemas import (RegisterRequest, RegisterResponse, VerifyCodeRequest, MessageResponse, LoginRequest,
                             LoginResponse)
 from server.db.models import users_table
-from server.db.core import select_all_users_fields, insert_username, get_user_by_username
+from server.db.core import get_user_fields, add_user, get_user_data_by_username
 from server.utils.utils import check_all, send_email
 from server.utils.jwt import create_access_token
 from server.db.redis import redis
@@ -15,7 +15,7 @@ router = APIRouter()
 
 @router.post("/register")
 async def register(user: RegisterRequest) -> RegisterResponse:
-    all_users = await select_all_users_fields(users_table.c.username, users_table.c.email)
+    all_users = await get_user_fields(users_table.c.username, users_table.c.email)
     usernames = {row[0] for row in all_users}
     emails = {row[1] for row in all_users}
 
@@ -51,7 +51,7 @@ async def verify_email(data: VerifyCodeRequest) -> MessageResponse:
     if code != data.code:
         raise HTTPException(status_code=400, detail="Invalid code")
 
-    await insert_username(session_data["username"], session_data["password"], session_data["email"])
+    await add_user(session_data["username"], session_data["password"], session_data["email"])
     await redis.delete(f"session:{data.temp_id}")
     await redis.delete(f"verify:{session_data['email']}")
 
@@ -60,7 +60,7 @@ async def verify_email(data: VerifyCodeRequest) -> MessageResponse:
 
 @router.post("/login")
 async def login(user: LoginRequest) -> LoginResponse:
-    user_id, password = await get_user_by_username(user.username)
+    user_id, password = await get_user_data_by_username(user.username)
 
     if not password or password != user.password:
         raise HTTPException(status_code=400, detail="Invalid username or password")

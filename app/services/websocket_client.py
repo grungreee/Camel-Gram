@@ -14,14 +14,12 @@ class WebSocketClient:
             on_message=self.on_message
         )
 
-        self.thread = threading.Thread(target=self.ws.run_forever, daemon=True)
-
     @staticmethod
     def on_message(ws, message: str) -> None:
         print(message)
 
     def connect(self) -> None:
-        self.thread.start()
+        threading.Thread(target=self.ws.run_forever, daemon=True).start()
 
     def send(self, data: dict) -> None:
         token: str | None = get_validation_key()

@@ -2,7 +2,8 @@ import customtkinter as ctk
 import app.settings
 from PIL import Image
 from typing import TYPE_CHECKING
-from app.services.handle_requests import handle_search
+from app.services.handle_requests import handle_search, handle_change_display_name
+from app.services.auth_controller import handle_logout
 from app.services.websocket_client import WebSocketClient
 
 if TYPE_CHECKING:
@@ -74,11 +75,12 @@ class ChatWindow(ctk.CTkFrame):
         display_name_frame.pack(pady=(10, 0), padx=10, anchor=ctk.W, fill=ctk.X)
 
         display_name = app.settings.account_data["display_name"]
-        display_name_label = ctk.CTkLabel(display_name_frame, text=f"{display_name}", font=("Arial", 15, "bold"))
+        display_name_label = ctk.CTkLabel(display_name_frame, text=display_name, font=("Arial", 15, "bold"))
         display_name_label.pack(side=ctk.LEFT)
 
         change_display_name_button = ctk.CTkButton(display_name_frame, text="", width=20, image=pencil_icon,
-                                                   fg_color="transparent", hover_color="#343434")
+                                                   fg_color="transparent", hover_color="#343434",
+                                                   command=lambda: handle_change_display_name(display_name_label))
         change_display_name_button.pack(side=ctk.LEFT, padx=10)
 
         username_frame = ctk.CTkFrame(account_info_frame, fg_color="transparent", height=28)
@@ -93,7 +95,8 @@ class ChatWindow(ctk.CTkFrame):
                                                fg_color="transparent", hover_color="#343434")
         change_username_button.pack(side=ctk.LEFT, padx=10)
 
-        self.parent.styled_button(account_info_frame, text="Logout").pack(pady=(10, 0), padx=10, fill=ctk.X)
+        self.parent.styled_button(account_info_frame, text="Logout", command=handle_logout
+                                  ).pack(pady=(10, 0), padx=10, fill=ctk.X)
 
     def init_main_left_side(self, _=None) -> None:
         self.clear_left_side()

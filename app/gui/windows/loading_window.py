@@ -1,4 +1,6 @@
+import threading
 import customtkinter as ctk
+import time
 from app.gui.context import AppContext
 
 
@@ -7,6 +9,7 @@ class LoadingWindow(ctk.CTkToplevel):
         super().__init__()
         
         self.root: ctk.CTk = root
+        self.active_loadings: int = 0
         self.stop_flag: bool = False
 
         self.withdraw()
@@ -15,6 +18,8 @@ class LoadingWindow(ctk.CTkToplevel):
         self.geometry("300x150")
         self.protocol("WM_DELETE_WINDOW", self.on_delete_window)
         self.resizable(False, False)
+        self.bind("<Configure>", self.set_geometry)
+        self.attributes("-topmost", True)
 
         self.loading_label = ctk.CTkLabel(self, text="Loading...", font=("Arial", 20, "bold"))
         self.loading_label.place(relx=0.5, rely=0.5, anchor=ctk.CENTER)
@@ -30,15 +35,14 @@ class LoadingWindow(ctk.CTkToplevel):
         self.geometry(f"+{x}+{y}")
 
     def start_loading(self) -> None:
-        if self.winfo_exists():
-            self.bind("<Configure>", self.set_geometry)
-            self.attributes("-topmost", True)
+        self.active_loadings += 1
+        self.stop_flag = False
+
+        if self.active_loadings == 1:
             self.start_loading_animation()
 
-            self.deiconify()
-
     def animate_loading(self) -> None:
-        if not self.stop_flag:
+        if self.winfo_exists() and not self.stop_flag:
             label_text = self.loading_label.cget("text")
             if label_text == "Loading...":
                 self.loading_label.configure(text="Loading")
@@ -47,14 +51,20 @@ class LoadingWindow(ctk.CTkToplevel):
             self.after(350, self.animate_loading)
 
     def start_loading_animation(self) -> None:
-        self.stop_flag = False
+        self.loading_label.configure(text="Loading")
+        self.deiconify()
         self.animate_loading()
 
     def finish_loading(self) -> None:
-        self.stop_flag = True
+        def finish() -> None:
+            time.sleep(0.35)
 
-        if self.winfo_exists():
-            self.withdraw()
+            if self.active_loadings == 1 and self.winfo_exists():
+                self.stop_flag = True
+                self.active_loadings -= 1
+                self.withdraw()
+
+        threading.Thread(target=finish).start()
 
 
 def init_loading_window() -> None:

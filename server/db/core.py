@@ -8,14 +8,14 @@ def create_tables() -> None:
     metadata_obj.create_all(sync_engine)
 
 
-async def insert_username(username: str, password: str, email: str) -> None:
+async def add_user(username: str, password: str, email: str) -> None:
     async with async_engine.begin() as conn:
-        smtp = users_table.insert().values(username=username, password=password, email=email)
+        smtp = users_table.insert().values(display_name=username, username=username, password=password, email=email)
         await conn.execute(smtp)
 
 
-async def select_all_users_fields(*fields: Column[Any]) -> list[tuple[str, str]]:
-    async with async_engine.connect() as conn:
+async def get_user_fields(*fields: Column[Any]) -> list[tuple[str, str]]:
+    async with async_engine.begin() as conn:
         smtp = select(*fields).select_from(users_table)
         result = await conn.execute(smtp)
 
@@ -23,15 +23,15 @@ async def select_all_users_fields(*fields: Column[Any]) -> list[tuple[str, str]]
 
 
 async def get_user_fields_by_id(user_id: int, *fields: Column[Any]) -> list[tuple[Any]] | None:
-    async with async_engine.connect() as conn:
+    async with async_engine.begin() as conn:
         smtp = select(*fields).select_from(users_table).where(users_table.c.id == user_id)
         result = await conn.execute(smtp)
 
     return result.first()
 
 
-async def get_user_by_username(username: str) -> tuple[str] | None:
-    async with async_engine.connect() as conn:
+async def get_user_data_by_username(username: str) -> tuple[str] | None:
+    async with async_engine.begin() as conn:
         smtp = select(users_table.c.id, users_table.c.password).where(users_table.c.username == username)
         result = await conn.execute(smtp)
 
@@ -39,7 +39,7 @@ async def get_user_by_username(username: str) -> tuple[str] | None:
 
 
 async def search_username(text: str) -> list[tuple[str]] | None:
-    async with async_engine.connect() as conn:
+    async with async_engine.begin() as conn:
         smtp = select(
             users_table.c.username,
             users_table.c.display_name
@@ -47,3 +47,9 @@ async def search_username(text: str) -> list[tuple[str]] | None:
         result = await conn.execute(smtp)
 
     return result.all()
+
+
+async def change_display_name(user_id: int, new_display_name: str) -> None:
+    async with async_engine.begin() as conn:
+        smtp = users_table.update().where(users_table.c.id == user_id).values(display_name=new_display_name)
+        await conn.execute(smtp)
