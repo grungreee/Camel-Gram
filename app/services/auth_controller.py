@@ -82,8 +82,6 @@ def check_validation() -> None:
         AppContext.main_window.ws_client.connect()
         AppContext.main_window.navigation.navigate_to(WindowState.MAIN_CHAT)
     elif response_status == 401:
-        AppContext.main_window.navigation.navigate_to(WindowState.AUTH_LOGIN)
-        showinfo("Info", "You are not authorized. Please log in.")
         delete_validation_key()
     elif response_status == 1:
         AppContext.main_window.navigation.navigate_to(WindowState.AUTH_REGISTER)

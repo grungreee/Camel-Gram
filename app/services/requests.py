@@ -2,8 +2,9 @@ import app.settings
 import requests as rq
 from json import JSONDecodeError
 from typing import Literal
-from tkinter.messagebox import showerror
+from tkinter.messagebox import showerror, showinfo
 from app.services.utils import get_validation_key
+from app.gui.navigation_controller import WindowState
 from app.gui.context import AppContext
 
 
@@ -29,6 +30,10 @@ def make_request(method: Literal["get", "post"], endpoint: str, data: dict | Non
 
         if with_loading_window:
             AppContext.loading_window.finish_loading()
+        if response.status_code == 401:
+            AppContext.main_window.navigation.navigate_to(WindowState.AUTH_LOGIN)
+            showinfo("Info", "You are not authorized. Please log in.")
+
         try:
             return response.status_code, response.json()
         except (JSONDecodeError, ValueError):

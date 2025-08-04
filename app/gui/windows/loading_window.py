@@ -7,12 +7,12 @@ from app.gui.context import AppContext
 class LoadingWindow(ctk.CTkToplevel):
     def __init__(self, root: ctk.CTk) -> None:
         super().__init__()
+
+        self.withdraw()
         
         self.root: ctk.CTk = root
         self.active_loadings: int = 0
         self.stop_flag: bool = False
-
-        self.withdraw()
 
         self.title("Loading...")
         self.geometry("300x150")

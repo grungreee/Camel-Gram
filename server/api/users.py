@@ -3,7 +3,6 @@ from fastapi.security import OAuth2PasswordBearer
 from server.db.models import users_table
 from server.db.core import get_user_fields_by_id, search_username, change_display_name
 from server.utils.jwt import verify_access_token
-from server.utils.utils import check_all
 from server.schemas import DisplayNameChangeRequest, MessageResponse
 
 router = APIRouter()

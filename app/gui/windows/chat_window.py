@@ -15,67 +15,75 @@ class ChatWindow(ctk.CTkFrame):
         super().__init__(parent)
 
         self.parent: "MainRoot" = parent
-
         self.ws_client: WebSocketClient = parent.ws_client
-        self.left_side: ctk.CTkFrame | None = None
-        self.upper_left_frame: ctk.CTkFrame | None = None
-        self.bottom_left_frame: ctk.CTkFrame | None = None
+
+        self.left_upper_frame: ctk.CTkFrame | None = None
+        self.left_bottom_frame: ctk.CTkFrame | None = None
+        self.right_upper_frame: ctk.CTkFrame | None = None
+        self.right_bottom_frame: ctk.CTkFrame | None = None
 
         self.debounce_timer: str | None = None
+        self.current_chat: tuple[ctk.CTkFrame, dict] | None = None
 
     def setup_chat_ui(self, _=None) -> None:
         self.parent.title(self.parent.title_text)
 
-        self.left_side = ctk.CTkFrame(self, width=250, corner_radius=0)
-        self.left_side.pack_propagate(False)
-        self.left_side.pack(side=ctk.LEFT, fill=ctk.Y)
+        left_side = ctk.CTkFrame(self, width=250, corner_radius=0)
+        left_side.pack_propagate(False)
+        left_side.pack(side=ctk.LEFT, fill=ctk.Y)
 
-        self.upper_left_frame = ctk.CTkFrame(self.left_side, corner_radius=0, height=50, fg_color="#292929")
-        self.upper_left_frame.pack_propagate(False)
-        self.upper_left_frame.pack(fill=ctk.X)
+        self.left_upper_frame = ctk.CTkFrame(left_side, corner_radius=0, height=50, fg_color="#292929", border_width=1)
+        self.left_upper_frame.pack_propagate(False)
+        self.left_upper_frame.pack(fill=ctk.X)
 
-        self.bottom_left_frame = ctk.CTkFrame(self.left_side, corner_radius=0, fg_color="transparent")
-        self.bottom_left_frame.pack_propagate(False)
-        self.bottom_left_frame.pack(fill=ctk.BOTH, expand=True)
+        self.left_bottom_frame = ctk.CTkFrame(left_side, corner_radius=0, fg_color="transparent")
+        self.left_bottom_frame.pack_propagate(False)
+        self.left_bottom_frame.pack(fill=ctk.BOTH, expand=True)
 
         self.init_main_left_side()
-
+        
         right_side = ctk.CTkFrame(self, corner_radius=0, fg_color="transparent")
         right_side.pack_propagate(False)
         right_side.pack(side=ctk.RIGHT, fill=ctk.BOTH, expand=True)
-        right_side.bind("<Button-1>", self.init_main_left_side)
+        
+        self.right_upper_frame = ctk.CTkFrame(right_side, corner_radius=0, height=50, fg_color="#292929")
+        self.right_upper_frame.pack_propagate(False)
+        self.right_upper_frame.pack(fill=ctk.X)
+        self.right_upper_frame.bind("<Button-1>", self.init_main_left_side)
 
-        def foo():
-            self.ws_client.send({"type": "ping"})
+        self.right_bottom_frame = ctk.CTkFrame(right_side, corner_radius=0, fg_color="transparent")
+        self.right_bottom_frame.pack_propagate(False)
+        self.right_bottom_frame.pack(fill=ctk.BOTH, expand=True)
+        self.right_bottom_frame.bind("<Button-1>", self.init_main_left_side)
 
-        send_button = ctk.CTkButton(right_side, text="Ping websocket", command=foo)
-        send_button.place(rely=0.5, relx=0.5, anchor=ctk.CENTER)
+        self.parent.bind("<Escape>", lambda _: self.init_chat(is_close=True))
+        self.init_chat(is_close=True)
 
     def init_side_menu(self) -> None:
-        self.clear_left_side()
+        self.clear_frame(self.left_upper_frame)
+        self.clear_frame(self.left_bottom_frame)
 
         back_arrow_image = ctk.CTkImage(light_image=Image.open("app/assets/icons/arrow_left.png"),
                                         size=(18, 13))
-        back_button = self.parent.styled_button(self.upper_left_frame, text="", height=30, width=40,
+        back_button = self.parent.styled_button(self.left_upper_frame, text="", height=30, width=40,
                                                 corner_radius=5, image=back_arrow_image,
                                                 command=self.init_main_left_side)
         back_button.pack(padx=(10, 0), side=ctk.LEFT)
 
-        ctk.CTkLabel(self.bottom_left_frame, text="Account", font=("Arial", 17, "bold")
+        ctk.CTkLabel(self.left_bottom_frame, text="Account", font=("Arial", 17, "bold")
                      ).pack(pady=(10, 0), padx=15, anchor=ctk.W)
 
-        account_info_frame = ctk.CTkFrame(self.bottom_left_frame, height=125)
-        account_info_frame.pack_propagate(False)
+        account_info_frame = ctk.CTkFrame(self.left_bottom_frame, height=125)
         account_info_frame.pack(pady=(5, 0), padx=10, fill=ctk.X)
 
         pencil_icon = ctk.CTkImage(light_image=Image.open("app/assets/icons/pencil.png"), size=(17, 17))
 
-        display_name_frame = ctk.CTkFrame(account_info_frame, fg_color="transparent", height=28)
-        display_name_frame.pack_propagate(False)
+        display_name_frame = ctk.CTkFrame(account_info_frame, fg_color="transparent", height=24)
         display_name_frame.pack(pady=(10, 0), padx=10, anchor=ctk.W, fill=ctk.X)
 
         display_name = app.settings.account_data["display_name"]
-        display_name_label = ctk.CTkLabel(display_name_frame, text=display_name, font=("Arial", 15, "bold"))
+        display_name_label = ctk.CTkLabel(display_name_frame, text=display_name, font=("Arial", 15, "bold"),
+                                          wraplength=160, justify=ctk.LEFT)
         display_name_label.pack(side=ctk.LEFT)
 
         change_display_name_button = ctk.CTkButton(display_name_frame, text="", width=20, image=pencil_icon,
@@ -91,27 +99,24 @@ class ChatWindow(ctk.CTkFrame):
         username_label = ctk.CTkLabel(username_frame, text=f"@{username}", font=("Arial", 12))
         username_label.pack(side=ctk.LEFT)
 
-        change_username_button = ctk.CTkButton(username_frame, text="", width=20, image=pencil_icon,
-                                               fg_color="transparent", hover_color="#343434")
-        change_username_button.pack(side=ctk.LEFT, padx=10)
-
         self.parent.styled_button(account_info_frame, text="Logout", command=handle_logout
-                                  ).pack(pady=(10, 0), padx=10, fill=ctk.X)
+                                  ).pack(pady=10, padx=10, fill=ctk.X)
 
     def init_main_left_side(self, _=None) -> None:
-        self.clear_left_side()
+        self.clear_frame(self.left_upper_frame)
+        self.clear_frame(self.left_bottom_frame)
 
         burger_menu_image = ctk.CTkImage(light_image=Image.open("app/assets/icons/burger_menu.png"), size=(18, 13))
-        open_side_menu_button = self.parent.styled_button(self.upper_left_frame, text="", image=burger_menu_image,
+        open_side_menu_button = self.parent.styled_button(self.left_upper_frame, text="", image=burger_menu_image,
                                                           width=40, height=30, corner_radius=5,
                                                           command=self.init_side_menu)
         open_side_menu_button.pack(side=ctk.LEFT, padx=(10, 0))
 
-        search_entry = ctk.CTkEntry(self.upper_left_frame, placeholder_text="Search", height=30)
+        search_entry = ctk.CTkEntry(self.left_upper_frame, placeholder_text="Search", height=30)
         search_entry.pack(side=ctk.RIGHT, padx=10, fill=ctk.X, expand=True)
         search_entry.bind("<FocusIn>", self.init_search_left_side)
 
-        ctk.CTkLabel(self.bottom_left_frame, text="You dont have chats.",
+        ctk.CTkLabel(self.left_bottom_frame, text="You dont have chats.",
                      font=("Arial", 15, "bold")).place(relx=0.5, rely=0.5, anchor=ctk.CENTER)
 
     def init_search_left_side(self, _=None) -> None:
@@ -129,37 +134,99 @@ class ChatWindow(ctk.CTkFrame):
 
             self.debounce_timer = self.after(350, lambda: handle_search(text_var.get()))
 
-        self.clear_left_side()
+        self.clear_frame(self.left_upper_frame)
+        self.clear_frame(self.left_bottom_frame)
 
         back_arrow_image = ctk.CTkImage(light_image=Image.open("app/assets/icons/arrow_left.png"),
                                         size=(18, 13))
-        back_button = self.parent.styled_button(self.upper_left_frame, text="", height=30, width=40,
+        back_button = self.parent.styled_button(self.left_upper_frame, text="", height=30, width=40,
                                                 corner_radius=5, image=back_arrow_image, command=back)
         back_button.pack(padx=(10, 0), side=ctk.LEFT)
 
         text_var = ctk.StringVar()
         text_var.trace_add("write", on_text_change)
 
-        search_entry = ctk.CTkEntry(self.upper_left_frame, height=30, textvariable=text_var)
+        search_entry = ctk.CTkEntry(self.left_upper_frame, height=30, textvariable=text_var)
         search_entry.pack(side=ctk.RIGHT, padx=10, fill=ctk.X, expand=True)
         search_entry.focus()
 
-        self.init_search_bottom_left_side()
-
-    def init_search_bottom_left_side(self) -> None:
-        self.clear_left_bottom_frame()
-
-        ctk.CTkLabel(self.bottom_left_frame, text="Start typing to search",
+        ctk.CTkLabel(self.left_bottom_frame, text="Start typing to search",
                      font=("Arial", 15, "bold")).place(relx=0.5, rely=0.5, anchor=ctk.CENTER)
 
-    def clear_left_upper_frame(self) -> None:
-        for widget in self.upper_left_frame.winfo_children():
-            widget.destroy()
+    def bind_chat_frame(self, frame: ctk.CTkFrame, user: dict | None = None, is_unbind: bool = False) -> None:
+        def bind(widget) -> None:
+            widget.bind("<Button-1>", lambda _: self.choose_chat(frame, user))
+            widget.bind("<Enter>", lambda _: frame.configure(fg_color="#444444"))
+            widget.bind("<Leave>", lambda _: frame.configure(fg_color="transparent"))
 
-    def clear_left_bottom_frame(self) -> None:
-        for widget in self.bottom_left_frame.winfo_children():
-            widget.destroy()
+        def unbind(widget) -> None:
+            widget.unbind("<Button-1>")
+            widget.unbind("<Enter>")
+            widget.unbind("<Leave>")
 
-    def clear_left_side(self) -> None:
-        self.clear_left_upper_frame()
-        self.clear_left_bottom_frame()
+        frame.configure(fg_color="#555555" if is_unbind else "transparent")
+        unbind(frame) if is_unbind else bind(frame)
+
+        for widget in frame.winfo_children():
+            unbind(widget) if is_unbind else bind(widget)
+
+    def init_chats_list(self, chats: list[dict]) -> None:
+        frame = ctk.CTkScrollableFrame(self.left_bottom_frame,
+                                       fg_color="transparent", corner_radius=0,
+                                       border_width=0, scrollbar_button_color="#444444",
+                                       scrollbar_button_hover_color="#545454")
+        # noinspection PyProtectedMember
+        frame._scrollbar.configure(width=13)
+        frame.pack(fill=ctk.BOTH, expand=True)
+
+        for user in chats["users"]:
+            user_frame = ctk.CTkFrame(frame, fg_color="transparent", corner_radius=0, border_width=0, height=60,
+                                      cursor="hand2")
+            user_frame.pack(fill=ctk.X)
+
+            ctk.CTkLabel(user_frame, text=user["display_name"], font=("Arial", 14, "bold"),
+                         wraplength=160, justify=ctk.LEFT,
+                         cursor="hand2").pack(side=ctk.TOP, anchor=ctk.W, padx=10, pady=(5, 0))
+            ctk.CTkLabel(user_frame, text=f"@{user["username"]}", font=("Arial", 12),
+                         cursor="hand2").pack(side=ctk.BOTTOM, anchor=ctk.W, padx=10, pady=(0, 5))
+
+            self.bind_chat_frame(user_frame, user=user)
+
+    def init_search_results_left_side(self, results: list[dict] | None, no_text: bool) -> None:
+        self.clear_frame(self.left_bottom_frame)
+
+        if no_text:
+            ctk.CTkLabel(self.left_bottom_frame, text="Start typing to search",
+                         font=("Arial", 15, "bold")).place(relx=0.5, rely=0.5, anchor=ctk.CENTER)
+        elif results is not None:
+            self.init_chats_list(results)
+        else:
+            ctk.CTkLabel(self.left_bottom_frame, text="No results found",
+                         font=("Arial", 15, "bold")).place(relx=0.5, rely=0.5, anchor=ctk.CENTER)
+
+    def choose_chat(self, frame: ctk.CTkFrame, user: dict) -> None:
+        if self.current_chat is not None and self.current_chat[0].winfo_exists():
+            self.bind_chat_frame(*self.current_chat)
+
+        self.current_chat = [frame, user]
+        self.bind_chat_frame(frame, is_unbind=True)
+
+        self.init_chat()
+
+    def init_chat(self, is_close: bool = False) -> None:
+        self.clear_frame(self.right_upper_frame)
+        self.clear_frame(self.right_bottom_frame)
+
+        if is_close:
+            self.current_chat = None
+            frame = ctk.CTkFrame(self.right_bottom_frame, fg_color="#343434", corner_radius=20)
+            frame.place(rely=0.5, relx=0.5, anchor=ctk.CENTER)
+
+            ctk.CTkLabel(frame, text="Select a chat to start messaging").pack(padx=18)
+        else:
+            ...
+
+    @staticmethod
+    def clear_frame(frame: ctk.CTkFrame) -> None:
+        for widget in frame.winfo_children():
+            widget.destroy()
