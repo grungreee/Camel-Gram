@@ -22,6 +22,10 @@ class ChatWindow(ctk.CTkFrame):
         self.right_upper_frame: ctk.CTkFrame | None = None
         self.right_bottom_frame: ctk.CTkFrame | None = None
 
+        self.username_label: ctk.CTkLabel | None = None
+        self.display_name_label: ctk.CTkLabel | None = None
+        self.textbox: ctk.CTkTextbox | None = None
+
         self.debounce_timer: str | None = None
         self.current_chat: tuple[ctk.CTkFrame, dict] | None = None
 
@@ -41,11 +45,11 @@ class ChatWindow(ctk.CTkFrame):
         self.left_bottom_frame.pack(fill=ctk.BOTH, expand=True)
 
         self.init_main_left_side()
-        
+
         right_side = ctk.CTkFrame(self, corner_radius=0, fg_color="transparent")
         right_side.pack_propagate(False)
         right_side.pack(side=ctk.RIGHT, fill=ctk.BOTH, expand=True)
-        
+
         self.right_upper_frame = ctk.CTkFrame(right_side, corner_radius=0, height=50, fg_color="#292929")
         self.right_upper_frame.pack_propagate(False)
         self.right_upper_frame.pack(fill=ctk.X)
@@ -214,17 +218,50 @@ class ChatWindow(ctk.CTkFrame):
         self.init_chat()
 
     def init_chat(self, is_close: bool = False) -> None:
-        self.clear_frame(self.right_upper_frame)
-        self.clear_frame(self.right_bottom_frame)
-
         if is_close:
-            self.current_chat = None
+            self.clear_frame(self.right_upper_frame)
+            self.clear_frame(self.right_bottom_frame)
+
+            if self.current_chat is not None:
+                if self.current_chat[0].winfo_exists():
+                    self.bind_chat_frame(*self.current_chat)
+                self.current_chat = None
+
             frame = ctk.CTkFrame(self.right_bottom_frame, fg_color="#343434", corner_radius=20)
             frame.place(rely=0.5, relx=0.5, anchor=ctk.CENTER)
 
             ctk.CTkLabel(frame, text="Select a chat to start messaging").pack(padx=18)
         else:
-            ...
+            if self.display_name_label and self.display_name_label.winfo_exists():
+                self.display_name_label.configure(text=self.current_chat[1]["display_name"])
+                self.username_label.configure(text=f"@{self.current_chat[1]['username']}")
+                self.textbox.delete(1.0, ctk.END)
+                return
+
+            self.clear_frame(self.right_upper_frame)
+            self.clear_frame(self.right_bottom_frame)
+
+            self.display_name_label = ctk.CTkLabel(self.right_upper_frame, text=self.current_chat[1]["display_name"],
+                                                   font=("Arial", 14, "bold"))
+            self.display_name_label.pack(padx=15, anchor=ctk.W, side=ctk.TOP)
+
+            self.username_label = ctk.CTkLabel(self.right_upper_frame, text=f"@{self.current_chat[1]["username"]}",
+                                               font=("Arial", 12))
+            self.username_label.pack(padx=15, anchor=ctk.W, side=ctk.BOTTOM)
+
+            entry_frame = ctk.CTkFrame(self.right_bottom_frame, fg_color="#343434", height=50, border_width=1,
+                                       corner_radius=0, border_color="#292929")
+            entry_frame.pack_propagate(False)
+            entry_frame.pack(fill=ctk.X, side=ctk.BOTTOM)
+
+            self.textbox = ctk.CTkTextbox(entry_frame, height=30, border_width=0, corner_radius=0,
+                                          font=("Arial", 13), fg_color="transparent", pady=10, padx=10)
+            self.textbox.pack(expand=True, fill=ctk.X, padx=1, anchor=ctk.CENTER, pady=1, side=ctk.LEFT)
+
+            send_image = ctk.CTkImage(light_image=Image.open("app/assets/icons/send.png"), size=(24, 24))
+            send_button = ctk.CTkButton(entry_frame, text="", image=send_image, width=24, height=24,
+                                        fg_color="transparent", hover_color="#444444")
+            send_button.pack(side=ctk.LEFT, padx=10)
 
     @staticmethod
     def clear_frame(frame: ctk.CTkFrame) -> None:
