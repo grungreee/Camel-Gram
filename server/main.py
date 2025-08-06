@@ -1,5 +1,4 @@
 from fastapi import FastAPI
-from redis.asyncio import Redis
 from server.db.core import create_tables
 from server.api import auth, users
 from server.websocket_manager import websocket_endpoint

@@ -2,6 +2,7 @@ import hashlib
 import string
 import re
 import keyring
+import app.settings
 
 
 def check_all(username: str, password: str, email: str | None = None) -> str | bool:
@@ -33,12 +34,12 @@ def hash_password(password: str) -> str:
 
 
 def get_validation_key() -> str | None:
-    return keyring.get_password("CamelGram", "access_key")
+    return keyring.get_password("CamelGram" + app.settings.session, "access_key")
 
 
 def set_validation_key(key: str) -> None:
-    keyring.set_password("CamelGram", "access_key", key)
+    keyring.set_password("CamelGram" + app.settings.session, "access_key", key)
 
 
 def delete_validation_key() -> None:
-    keyring.delete_password("CamelGram", "access_key")
+    keyring.delete_password("CamelGram" + app.settings.session, "access_key")

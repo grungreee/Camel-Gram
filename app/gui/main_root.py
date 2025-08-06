@@ -16,7 +16,7 @@ class MainRoot(ctk.CTk):
         self.geometry("1000x600")
 
         self.navigation = NavigationController(self)
-        self.ws_client = WebSocketClient()
+        self.ws_client: WebSocketClient | None = None
 
         self.auth_window: AuthWindow | None = None
         self.verify_window: VerifyWindow | None = None

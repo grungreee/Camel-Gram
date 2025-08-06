@@ -2,12 +2,11 @@ import customtkinter as ctk
 import app.settings
 from PIL import Image
 from typing import TYPE_CHECKING
-from app.services.handle_requests import handle_search, handle_change_display_name
 from app.services.auth_controller import handle_logout
-from app.services.websocket_client import WebSocketClient
+from app.services.handle_requests import handle_search, handle_change_display_name
 
 if TYPE_CHECKING:
-    from app.gui.main_root import MainRoot
+    from app.gui.main_root import MainRoot  # noqa: F401
 
 
 class ChatWindow(ctk.CTkFrame):
@@ -15,7 +14,6 @@ class ChatWindow(ctk.CTkFrame):
         super().__init__(parent)
 
         self.parent: "MainRoot" = parent
-        self.ws_client: WebSocketClient = parent.ws_client
 
         self.left_upper_frame: ctk.CTkFrame | None = None
         self.left_bottom_frame: ctk.CTkFrame | None = None
@@ -136,6 +134,7 @@ class ChatWindow(ctk.CTkFrame):
         def on_text_change(*_) -> None:
             cancel_search()
 
+            # noinspection PyTypeChecker
             self.debounce_timer = self.after(350, lambda: handle_search(text_var.get()))
 
         self.clear_frame(self.left_upper_frame)
@@ -174,7 +173,7 @@ class ChatWindow(ctk.CTkFrame):
         for widget in frame.winfo_children():
             unbind(widget) if is_unbind else bind(widget)
 
-    def init_chats_list(self, chats: list[dict]) -> None:
+    def init_chats_list(self, chats: dict) -> None:
         frame = ctk.CTkScrollableFrame(self.left_bottom_frame,
                                        fg_color="transparent", corner_radius=0,
                                        border_width=0, scrollbar_button_color="#444444",
@@ -196,7 +195,7 @@ class ChatWindow(ctk.CTkFrame):
 
             self.bind_chat_frame(user_frame, user=user)
 
-    def init_search_results_left_side(self, results: list[dict] | None, no_text: bool) -> None:
+    def init_search_results_left_side(self, results: dict | None, no_text: bool) -> None:
         self.clear_frame(self.left_bottom_frame)
 
         if no_text:
@@ -218,6 +217,16 @@ class ChatWindow(ctk.CTkFrame):
         self.init_chat()
 
     def init_chat(self, is_close: bool = False) -> None:
+        def send_message(_=None) -> None:
+            data: dict = {
+                "type": "send_message",
+                "receiver_id": self.current_chat[1]["user_id"],
+                "message": self.textbox.get(1.0, ctk.END)
+            }
+
+            self.parent.ws_client.send(data)
+            self.textbox.delete(1.0, ctk.END)
+
         if is_close:
             self.clear_frame(self.right_upper_frame)
             self.clear_frame(self.right_bottom_frame)
@@ -231,6 +240,7 @@ class ChatWindow(ctk.CTkFrame):
             frame.place(rely=0.5, relx=0.5, anchor=ctk.CENTER)
 
             ctk.CTkLabel(frame, text="Select a chat to start messaging").pack(padx=18)
+            self.parent.unbind("<Enter>")
         else:
             if self.display_name_label and self.display_name_label.winfo_exists():
                 self.display_name_label.configure(text=self.current_chat[1]["display_name"])
@@ -260,8 +270,11 @@ class ChatWindow(ctk.CTkFrame):
 
             send_image = ctk.CTkImage(light_image=Image.open("app/assets/icons/send.png"), size=(24, 24))
             send_button = ctk.CTkButton(entry_frame, text="", image=send_image, width=24, height=24,
-                                        fg_color="transparent", hover_color="#444444")
+                                        fg_color="transparent", hover_color="#444444",
+                                        command=send_message)
             send_button.pack(side=ctk.LEFT, padx=10)
+
+            self.parent.bind("<Enter>", send_message)
 
     @staticmethod
     def clear_frame(frame: ctk.CTkFrame) -> None:

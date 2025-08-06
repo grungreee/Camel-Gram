@@ -29,3 +29,8 @@ class VerifyCodeRequest(BaseModel):
 
 class DisplayNameChangeRequest(BaseModel):
     display_name: str
+
+
+class MessageRequest(BaseModel):
+    receiver_id: str
+    message: str

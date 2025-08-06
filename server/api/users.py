@@ -24,7 +24,11 @@ async def me(token: str = Depends(oauth2_scheme)) -> dict:
 
 
 @router.get("/search_user")
-async def search_user(text: str) -> dict:
+async def search_user(text: str, token: str = Depends(oauth2_scheme)) -> dict:
+    payload = verify_access_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
     rows = await search_username(text)
 
     if not rows:
@@ -33,9 +37,13 @@ async def search_user(text: str) -> dict:
     response: dict[str, list[dict[str, str]]] = {"users": []}
 
     for row in rows:
-        response["users"].append({"username": row[0], "display_name": row[1]})
+        if row[0] != payload["user_id"]:
+            response["users"].append({"user_id": row[0], "username": row[1], "display_name": row[2]})
         if len(response["users"]) == 10:
             break
+
+    if len(response["users"]) == 0:
+        raise HTTPException(status_code=404, detail="User not found")
 
     return response
 

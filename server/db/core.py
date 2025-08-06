@@ -1,5 +1,5 @@
 from sqlalchemy import select, Column
-from server.db.models import metadata_obj, users_table
+from server.db.models import metadata_obj, users_table, messages_table
 from server.db.database import sync_engine, async_engine
 from typing import Any
 
@@ -24,6 +24,7 @@ async def get_user_fields(*fields: Column[Any]) -> list[tuple[str, str]]:
 
 async def get_user_fields_by_id(user_id: int, *fields: Column[Any]) -> list[tuple[Any]] | None:
     async with async_engine.begin() as conn:
+        # noinspection PyTypeChecker
         smtp = select(*fields).select_from(users_table).where(users_table.c.id == user_id)
         result = await conn.execute(smtp)
 
@@ -32,15 +33,17 @@ async def get_user_fields_by_id(user_id: int, *fields: Column[Any]) -> list[tupl
 
 async def get_user_data_by_username(username: str) -> tuple[str] | None:
     async with async_engine.begin() as conn:
+        # noinspection PyTypeChecker
         smtp = select(users_table.c.id, users_table.c.password).where(users_table.c.username == username)
         result = await conn.execute(smtp)
 
     return result.first()
 
 
-async def search_username(text: str) -> list[tuple[str]] | None:
+async def search_username(text: str) -> list[tuple[str, str, str]] | None:
     async with async_engine.begin() as conn:
         smtp = select(
+            users_table.c.id,
             users_table.c.username,
             users_table.c.display_name
         ).where(users_table.c.username.like(f'%{text}%'))
@@ -52,4 +55,10 @@ async def search_username(text: str) -> list[tuple[str]] | None:
 async def change_display_name(user_id: int, new_display_name: str) -> None:
     async with async_engine.begin() as conn:
         smtp = users_table.update().where(users_table.c.id == user_id).values(display_name=new_display_name)
+        await conn.execute(smtp)
+
+
+async def insert_message(sender_id: int, receiver_id: int, message: str) -> None:
+    async with async_engine.begin() as conn:
+        smtp = messages_table.insert().values(sender_id=sender_id, receiver_id=receiver_id, message=message)
         await conn.execute(smtp)

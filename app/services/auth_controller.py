@@ -6,6 +6,7 @@ from tkinter.messagebox import showerror, showinfo, askyesno
 from app.services.utils import check_all, hash_password
 from app.gui.navigation_controller import WindowState
 from app.services.utils import set_validation_key, delete_validation_key
+from app.services.websocket_client import WebSocketClient
 
 
 def handle_auth(username: str, password: str, email: str | None = None) -> None:
@@ -79,6 +80,7 @@ def check_validation() -> None:
 
     if response_status == 200:
         app.settings.account_data = response
+        AppContext.main_window.ws_client = WebSocketClient()
         AppContext.main_window.ws_client.connect()
         AppContext.main_window.navigation.navigate_to(WindowState.MAIN_CHAT)
     elif response_status == 401:

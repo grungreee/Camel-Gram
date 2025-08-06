@@ -10,7 +10,7 @@ from app.gui.context import AppContext
 def handle_search(text: str) -> None:
     def search() -> None:
         response_status, response = make_request("get", "search_user", {"text": text},
-                                                 with_loading_window=False)
+                                                 with_loading_window=False, with_token=True)
 
         if response_status == 0:
             return

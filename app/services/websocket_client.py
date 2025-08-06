@@ -10,8 +10,8 @@ class WebSocketClient:
     def __init__(self) -> None:
 
         self.ws = WebSocketApp(
-            url=f"ws://{app.settings.url}/ws",
-            on_message=self.on_message
+            url=f"ws://{app.settings.url}/ws?token={get_validation_key()}",
+            on_message=self.on_message,
         )
 
     @staticmethod
