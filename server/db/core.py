@@ -2,6 +2,7 @@ from sqlalchemy import select, Column
 from server.db.models import metadata_obj, users_table, messages_table
 from server.db.database import sync_engine, async_engine
 from typing import Any
+from datetime import datetime
 
 
 def create_tables() -> None:
@@ -62,3 +63,21 @@ async def insert_message(sender_id: int, receiver_id: int, message: str) -> None
     async with async_engine.begin() as conn:
         smtp = messages_table.insert().values(sender_id=sender_id, receiver_id=receiver_id, message=message)
         await conn.execute(smtp)
+
+
+async def get_messages(sender_id: int, receiver_id: int, page: int) -> list[tuple[int, str, datetime, str]]:
+    async with async_engine.begin() as conn:
+        # noinspection PyTypeChecker
+        smtp = select(
+            messages_table.c.id,
+            messages_table.c.message,
+            messages_table.c.timestamp,
+            users_table.c.display_name
+        ).join(users_table, users_table.c.id == messages_table.c.sender_id).where(
+            ((messages_table.c.sender_id == sender_id) & (messages_table.c.receiver_id == receiver_id)) |
+            ((messages_table.c.sender_id == receiver_id) & (messages_table.c.receiver_id == sender_id))
+        ).order_by(messages_table.c.id.desc()).limit(20).offset(page * 20)
+
+        result = await conn.execute(smtp)
+
+    return result.all()

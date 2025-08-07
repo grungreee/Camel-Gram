@@ -34,7 +34,7 @@ def handle_change_display_name(display_name_label: ctk.CTkLabel) -> None:
             if response_status == 200:
                 display_name_label.configure(text=display_name)
                 app.settings.account_data["display_name"] = display_name
-                showinfo("Info", response["message"])
+                showinfo("Info", "Display name changed successfully")
             elif response_status == 400:
                 showerror("Error", response["detail"])
 
@@ -42,3 +42,18 @@ def handle_change_display_name(display_name_label: ctk.CTkLabel) -> None:
             showerror(type(e).__name__, f"Error: {str(e)}")
 
     threading.Thread(target=change_display_name).start()
+
+
+def handle_get_messages() -> None:
+    def get_messages() -> None:
+        data: dict = {
+            "receiver_id": AppContext.main_window.chat_window.current_chat[1]["user_id"],
+            "page": 0,
+        }
+
+        response_status, response = make_request("get", "messages", data=data, with_token=True)
+
+        if response_status == 200:
+            AppContext.main_window.chat_window.init_messages(response)
+
+    threading.Thread(target=get_messages).start()

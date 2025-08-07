@@ -1,6 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from server.schemas import (RegisterRequest, RegisterResponse, VerifyCodeRequest, MessageResponse, LoginRequest,
-                            LoginResponse)
+from server.schemas import RegisterRequest, RegisterResponse, VerifyCodeRequest, LoginRequest, LoginResponse
 from server.db.models import users_table
 from server.db.core import get_user_fields, add_user, get_user_data_by_username
 from server.utils.utils import check_all, send_email
@@ -36,11 +35,11 @@ async def register(user: RegisterRequest) -> RegisterResponse:
 
     await send_email(user.email, "Confirmation code", f"Your code: {verify_code}")
 
-    return RegisterResponse(message="Code sent.", temp_id=temp_id)
+    return RegisterResponse(temp_id=temp_id)
 
 
 @router.post("/verify_email")
-async def verify_email(data: VerifyCodeRequest) -> MessageResponse:
+async def verify_email(data: VerifyCodeRequest) -> None:
     session_raw = await redis.get(f"session:{data.temp_id}")
     if not session_raw:
         raise HTTPException(status_code=400, detail="Session expired")
@@ -55,8 +54,6 @@ async def verify_email(data: VerifyCodeRequest) -> MessageResponse:
     await redis.delete(f"session:{data.temp_id}")
     await redis.delete(f"verify:{session_data['email']}")
 
-    return MessageResponse(message="User registered successfully")
-
 
 @router.post("/login")
 async def login(user: LoginRequest) -> LoginResponse:
@@ -66,4 +63,4 @@ async def login(user: LoginRequest) -> LoginResponse:
         raise HTTPException(status_code=400, detail="Invalid username or password")
 
     token = create_access_token({"user_id": user_id})
-    return LoginResponse(token=token, message="Login successful!")
+    return LoginResponse(token=token)

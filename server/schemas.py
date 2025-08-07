@@ -1,8 +1,5 @@
 from pydantic import BaseModel
-
-
-class MessageResponse(BaseModel):
-    message: str
+from datetime import datetime
 
 
 class LoginRequest(BaseModel):
@@ -10,7 +7,7 @@ class LoginRequest(BaseModel):
     password: str
 
 
-class LoginResponse(MessageResponse):
+class LoginResponse(BaseModel):
     token: str
 
 
@@ -18,7 +15,7 @@ class RegisterRequest(LoginRequest):
     email: str
 
 
-class RegisterResponse(MessageResponse):
+class RegisterResponse(BaseModel):
     temp_id: str
 
 
@@ -31,6 +28,8 @@ class DisplayNameChangeRequest(BaseModel):
     display_name: str
 
 
-class MessageRequest(BaseModel):
-    receiver_id: str
+class GetMessagesResponse(BaseModel):
+    id: int
     message: str
+    timestamp: datetime
+    sender_display_name: str

@@ -3,7 +3,7 @@ from fastapi.security import OAuth2PasswordBearer
 from server.db.models import users_table
 from server.db.core import get_user_fields_by_id, search_username, change_display_name
 from server.utils.jwt import verify_access_token
-from server.schemas import DisplayNameChangeRequest, MessageResponse
+from server.schemas import DisplayNameChangeRequest
 
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
@@ -49,7 +49,7 @@ async def search_user(text: str, token: str = Depends(oauth2_scheme)) -> dict:
 
 
 @router.post("/change_display_name")
-async def change_display_name_(body: DisplayNameChangeRequest, token: str = Depends(oauth2_scheme)) -> MessageResponse:
+async def change_display_name_(body: DisplayNameChangeRequest, token: str = Depends(oauth2_scheme)) -> None:
     payload = verify_access_token(token)
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid token")
@@ -60,5 +60,3 @@ async def change_display_name_(body: DisplayNameChangeRequest, token: str = Depe
         raise HTTPException(status_code=400, detail="Password must be between 1 and 25 characters long")
 
     await change_display_name(payload["user_id"], display_name)
-
-    return MessageResponse(message="Display name changed successfully")

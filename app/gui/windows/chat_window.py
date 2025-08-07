@@ -3,7 +3,8 @@ import app.settings
 from PIL import Image
 from typing import TYPE_CHECKING
 from app.services.auth_controller import handle_logout
-from app.services.handle_requests import handle_search, handle_change_display_name
+from app.gui.context import AppContext
+from app.services.handle_requests import handle_search, handle_change_display_name, handle_get_messages
 
 if TYPE_CHECKING:
     from app.gui.main_root import MainRoot  # noqa: F401
@@ -23,6 +24,7 @@ class ChatWindow(ctk.CTkFrame):
         self.username_label: ctk.CTkLabel | None = None
         self.display_name_label: ctk.CTkLabel | None = None
         self.textbox: ctk.CTkTextbox | None = None
+        self.messages_frame: ctk.CTkScrollableFrame | None = None
 
         self.debounce_timer: str | None = None
         self.current_chat: tuple[ctk.CTkFrame, dict] | None = None
@@ -217,15 +219,26 @@ class ChatWindow(ctk.CTkFrame):
         self.init_chat()
 
     def init_chat(self, is_close: bool = False) -> None:
-        def send_message(_=None) -> None:
-            data: dict = {
-                "type": "send_message",
-                "receiver_id": self.current_chat[1]["user_id"],
-                "message": self.textbox.get(1.0, ctk.END)
-            }
+        def send_message() -> None:
+            text: str = self.textbox.get(1.0, ctk.END).strip()
 
-            self.parent.ws_client.send(data)
-            self.textbox.delete(1.0, ctk.END)
+            if text:
+                data: dict = {
+                    "type": "send_message",
+                    "receiver_id": self.current_chat[1]["user_id"],
+                    "message": text
+                }
+
+                self.parent.ws_client.send(data)
+                self.textbox.delete(1.0, ctk.END)
+
+        def on_enter(event):
+            if event.state & 0x0001:
+                self.textbox.insert("insert", "\n")
+                return None
+            else:
+                send_message()
+                return "break"
 
         if is_close:
             self.clear_frame(self.right_upper_frame)
@@ -240,7 +253,7 @@ class ChatWindow(ctk.CTkFrame):
             frame.place(rely=0.5, relx=0.5, anchor=ctk.CENTER)
 
             ctk.CTkLabel(frame, text="Select a chat to start messaging").pack(padx=18)
-            self.parent.unbind("<Enter>")
+            self.parent.unbind("<Return>")
         else:
             if self.display_name_label and self.display_name_label.winfo_exists():
                 self.display_name_label.configure(text=self.current_chat[1]["display_name"])
@@ -259,6 +272,15 @@ class ChatWindow(ctk.CTkFrame):
                                                font=("Arial", 12))
             self.username_label.pack(padx=15, anchor=ctk.W, side=ctk.BOTTOM)
 
+            self.messages_frame = ctk.CTkScrollableFrame(self.right_bottom_frame, fg_color="transparent",
+                                                         corner_radius=0, border_width=0,
+                                                         scrollbar_button_color="#444444",
+                                                         scrollbar_button_hover_color="#545454")
+            self.messages_frame.pack(fill=ctk.BOTH, expand=True)
+
+            # noinspection PyProtectedMember
+            self.messages_frame._scrollbar.configure(width=13)
+
             entry_frame = ctk.CTkFrame(self.right_bottom_frame, fg_color="#343434", height=50, border_width=1,
                                        corner_radius=0, border_color="#292929")
             entry_frame.pack_propagate(False)
@@ -274,7 +296,26 @@ class ChatWindow(ctk.CTkFrame):
                                         command=send_message)
             send_button.pack(side=ctk.LEFT, padx=10)
 
-            self.parent.bind("<Enter>", send_message)
+            self.parent.bind("<Return>", on_enter)
+            handle_get_messages()
+
+    def init_messages(self, messages: list[dict]) -> None:
+        AppContext.loading_window.start_loading()
+
+        for message in messages:
+            message_frame = ctk.CTkFrame(self.messages_frame, fg_color="#343434", corner_radius=15, border_width=0)
+            message_frame.pack(side=ctk.BOTTOM, padx=10, pady=10, anchor=ctk.W)
+
+            ctk.CTkLabel(message_frame, text=message["sender_display_name"],
+                         font=("Arial", 14, "bold"), justify=ctk.LEFT,
+                         wraplength=300).pack(side=ctk.TOP, anchor=ctk.W, padx=(10, 30), pady=(10, 0))
+            ctk.CTkLabel(message_frame, text=message["message"], justify=ctk.LEFT,
+                         wraplength=300).pack(side=ctk.BOTTOM, anchor=ctk.W, padx=(10, 30), pady=(0, 10))
+
+        # noinspection PyProtectedMember
+        # noinspection PyTypeChecker
+        self.after(100, lambda: self.messages_frame._parent_canvas.yview_moveto(1.0))
+        AppContext.loading_window.finish_loading()
 
     @staticmethod
     def clear_frame(frame: ctk.CTkFrame) -> None:

@@ -37,11 +37,12 @@ def handle_auth(username: str, password: str, email: str | None = None) -> None:
             if response_status == 200:
                 if email is not None:
                     AppContext.main_window.navigation.navigate_to(WindowState.VERIFY, verify_id=response["temp_id"])
+                    showinfo("Success", "Code has been sent to your email")
                 else:
                     set_validation_key(response["token"])
                     check_validation()
                     AppContext.main_window.navigation.navigate_to(WindowState.MAIN_CHAT)
-                showinfo("Success", response["message"])
+                    showinfo("Success", "You have been logged in")
             elif response_status != 0:
                 showerror("Error", response["detail"])
         except Exception as e:
@@ -66,7 +67,7 @@ def handle_verify(code: str) -> None:
         try:
             if response_status == 200:
                 AppContext.main_window.navigation.navigate_to(WindowState.AUTH_LOGIN)
-                showinfo("Success", response["message"])
+                showinfo("Success", "Account has been created")
             else:
                 showerror("Error", response["detail"])
         except Exception as e:

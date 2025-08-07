@@ -30,7 +30,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     websocket_clients.pop(user_id)
                     return
 
-                if data["type"] == "send_message":
+                if data["type"] == "send_message" and data["message"].strip():
                     receiver_id: int = data["receiver_id"]
 
                     await insert_message(payload["user_id"], receiver_id, data["message"])

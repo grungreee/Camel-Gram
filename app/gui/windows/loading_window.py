@@ -48,6 +48,7 @@ class LoadingWindow(ctk.CTkToplevel):
                 self.loading_label.configure(text="Loading")
             else:
                 self.loading_label.configure(text=label_text + ".")
+            # noinspection PyTypeChecker
             self.after(350, self.animate_loading)
 
     def start_loading_animation(self) -> None:
@@ -57,11 +58,12 @@ class LoadingWindow(ctk.CTkToplevel):
 
     def finish_loading(self) -> None:
         def finish() -> None:
+            self.active_loadings -= 1
             time.sleep(0.35)
 
-            if self.active_loadings == 1 and self.winfo_exists():
+            if self.active_loadings == 0 and self.winfo_exists():
+                print("ff")
                 self.stop_flag = True
-                self.active_loadings -= 1
                 self.withdraw()
 
         threading.Thread(target=finish).start()
