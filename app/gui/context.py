@@ -1,8 +1,8 @@
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from app.gui.main_root import MainRoot
-    from app.gui.windows.loading_window import LoadingWindow
+    from app.gui.main_root import MainRoot  # noqa: F401
+    from app.gui.windows.loading_window import LoadingWindow  # noqa: F401
 
 
 class ClassProperty:

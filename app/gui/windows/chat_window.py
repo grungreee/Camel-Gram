@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from app.services.auth_controller import handle_logout
 from app.gui.context import AppContext
 from app.services.handle_requests import handle_search, handle_change_display_name, handle_get_messages
+from app.services.utils import iso_to_hm
 
 if TYPE_CHECKING:
     from app.gui.main_root import MainRoot  # noqa: F401
@@ -28,6 +29,7 @@ class ChatWindow(ctk.CTkFrame):
 
         self.debounce_timer: str | None = None
         self.current_chat: tuple[ctk.CTkFrame, dict] | None = None
+        self.last_message_frame: ctk.CTkFrame | None = None
 
     def setup_chat_ui(self, _=None) -> None:
         self.parent.title(self.parent.title_text)
@@ -299,18 +301,35 @@ class ChatWindow(ctk.CTkFrame):
             self.parent.bind("<Return>", on_enter)
             handle_get_messages()
 
-    def init_messages(self, messages: list[dict]) -> None:
+    def init_messages(self, messages: list[dict], new_message: bool = False) -> None:
         AppContext.loading_window.start_loading()
 
         for message in messages:
-            message_frame = ctk.CTkFrame(self.messages_frame, fg_color="#343434", corner_radius=15, border_width=0)
-            message_frame.pack(side=ctk.BOTTOM, padx=10, pady=10, anchor=ctk.W)
+            message_frame = ctk.CTkFrame(self.messages_frame, fg_color="#343434", corner_radius=17, border_width=0,
+                                         height=70, width=90)
 
-            ctk.CTkLabel(message_frame, text=message["sender_display_name"],
+            if self.last_message_frame is not None and self.last_message_frame.winfo_exists() and not new_message:
+                message_frame.pack(padx=10, pady=10, anchor=ctk.W, before=self.last_message_frame)
+            else:
+                message_frame.pack(padx=10, pady=10, anchor=ctk.W)
+
+            self.last_message_frame = message_frame
+
+            content_frame = ctk.CTkFrame(message_frame, fg_color="transparent", corner_radius=0, border_width=0)
+            content_frame.pack(fill=ctk.BOTH, expand=True, padx=10, pady=10)
+
+            ctk.CTkLabel(content_frame, text=message["sender_display_name"],
                          font=("Arial", 14, "bold"), justify=ctk.LEFT,
-                         wraplength=300).pack(side=ctk.TOP, anchor=ctk.W, padx=(10, 30), pady=(10, 0))
-            ctk.CTkLabel(message_frame, text=message["message"], justify=ctk.LEFT,
-                         wraplength=300).pack(side=ctk.BOTTOM, anchor=ctk.W, padx=(10, 30), pady=(0, 10))
+                         wraplength=300).pack(side=ctk.TOP, anchor=ctk.W, padx=(0, 30))
+
+            bottom_frame = ctk.CTkFrame(content_frame, fg_color="transparent", corner_radius=0, border_width=0)
+            bottom_frame.pack(side=ctk.BOTTOM, fill=ctk.X)
+
+            ctk.CTkLabel(bottom_frame, text=message["message"], justify=ctk.LEFT,
+                         wraplength=300).pack(side=ctk.LEFT, anchor=ctk.W)
+
+            ctk.CTkLabel(bottom_frame, text=iso_to_hm(message["timestamp"])
+                         ).pack(side=ctk.RIGHT, padx=(10, 0), anchor=ctk.SE)
 
         # noinspection PyProtectedMember
         # noinspection PyTypeChecker

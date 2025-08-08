@@ -12,7 +12,7 @@ class LoadingWindow(ctk.CTkToplevel):
         
         self.root: ctk.CTk = root
         self.active_loadings: int = 0
-        self.stop_flag: bool = False
+        self.animating: bool = False
 
         self.title("Loading...")
         self.geometry("300x150")
@@ -35,26 +35,33 @@ class LoadingWindow(ctk.CTkToplevel):
         self.geometry(f"+{x}+{y}")
 
     def start_loading(self) -> None:
-        self.active_loadings += 1
-        self.stop_flag = False
+        def start() -> None:
+            self.active_loadings += 1
 
-        if self.active_loadings == 1:
-            self.start_loading_animation()
+            if not self.animating:
+                self.start_loading_animation()
+
+        threading.Thread(target=start, daemon=True).start()
 
     def animate_loading(self) -> None:
-        if self.winfo_exists() and not self.stop_flag:
+        self.animating = True
+
+        while self.winfo_exists() and self.winfo_viewable():
             label_text = self.loading_label.cget("text")
             if label_text == "Loading...":
                 self.loading_label.configure(text="Loading")
             else:
                 self.loading_label.configure(text=label_text + ".")
-            # noinspection PyTypeChecker
-            self.after(350, self.animate_loading)
+
+            time.sleep(0.35)
+
+        self.animating = False
 
     def start_loading_animation(self) -> None:
         self.loading_label.configure(text="Loading")
         self.deiconify()
-        self.animate_loading()
+        self.grab_set()
+        threading.Thread(target=self.animate_loading, daemon=True).start()
 
     def finish_loading(self) -> None:
         def finish() -> None:
@@ -62,11 +69,10 @@ class LoadingWindow(ctk.CTkToplevel):
             time.sleep(0.35)
 
             if self.active_loadings == 0 and self.winfo_exists():
-                print("ff")
-                self.stop_flag = True
+                self.grab_release()
                 self.withdraw()
 
-        threading.Thread(target=finish).start()
+        threading.Thread(target=finish, daemon=True).start()
 
 
 def init_loading_window() -> None:

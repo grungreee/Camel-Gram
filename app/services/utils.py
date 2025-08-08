@@ -3,6 +3,21 @@ import string
 import re
 import keyring
 import app.settings
+from datetime import datetime, timezone
+
+
+def iso_to_hm(iso_str: str, to_local: bool = True) -> str:
+    if iso_str.endswith('Z'):
+        dt = datetime.fromisoformat(iso_str.replace('Z', '+00:00'))
+    else:
+        dt = datetime.fromisoformat(iso_str)
+
+    if to_local:
+        dt = dt.astimezone()
+    else:
+        dt = dt.astimezone(timezone.utc)
+
+    return f"{dt.hour}:{dt.minute:02d}"
 
 
 def check_all(username: str, password: str, email: str | None = None) -> str | bool:
