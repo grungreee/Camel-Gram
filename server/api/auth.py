@@ -57,10 +57,10 @@ async def verify_email(data: VerifyCodeRequest) -> None:
 
 @router.post("/login")
 async def login(user: LoginRequest) -> LoginResponse:
-    user_id, password = await get_user_data_by_username(user.username)
+    user_data_raw = await get_user_data_by_username(user.username)
 
-    if not password or password != user.password:
+    if (user_data_raw is None) or (not user_data_raw[1] or user_data_raw[1] != user.password):
         raise HTTPException(status_code=400, detail="Invalid username or password")
 
-    token = create_access_token({"user_id": user_id})
+    token = create_access_token({"user_id": user_data_raw[0]})
     return LoginResponse(token=token)

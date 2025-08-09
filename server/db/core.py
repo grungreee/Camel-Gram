@@ -32,7 +32,7 @@ async def get_user_fields_by_id(user_id: int, *fields: Column[Any]) -> list[tupl
     return result.first()
 
 
-async def get_user_data_by_username(username: str) -> tuple[str] | None:
+async def get_user_data_by_username(username: str) -> tuple[int, str] | None:
     async with async_engine.begin() as conn:
         # noinspection PyTypeChecker
         smtp = select(users_table.c.id, users_table.c.password).where(users_table.c.username == username)

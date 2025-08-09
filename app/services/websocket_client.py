@@ -16,8 +16,9 @@ class WebSocketClient:
         )
 
     @staticmethod
-    def on_message(_, message: dict) -> None:
-        print(message)
+    def on_message(_, message: str) -> None:
+        message: dict = json.loads(message)
+
         if message["type"] == "new_message":
             body: dict = message["body"]
             current_chat: tuple | None = AppContext.main_window.chat_window.current_chat
@@ -25,7 +26,7 @@ class WebSocketClient:
             if current_chat is not None and current_chat[0].winfo_exists() and \
                     current_chat[1]["user_id"] == body["sender_id"]:
                 message: dict = {
-                    "sender_display_name": current_chat[1]["display_name"],
+                    "display_name": current_chat[1]["display_name"],
                     "message": body["message"],
                     "timestamp": body["timestamp"]
                 }

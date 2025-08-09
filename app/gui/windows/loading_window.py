@@ -35,15 +35,13 @@ class LoadingWindow(ctk.CTkToplevel):
         self.geometry(f"+{x}+{y}")
 
     def start_loading(self) -> None:
-        def start() -> None:
-            self.active_loadings += 1
+        self.active_loadings += 1
 
-            if not self.animating:
-                self.start_loading_animation()
-
-        threading.Thread(target=start, daemon=True).start()
+        if not self.animating:
+            self.start_loading_animation()
 
     def animate_loading(self) -> None:
+        time.sleep(0.05)
         self.animating = True
 
         while self.winfo_exists() and self.winfo_viewable():

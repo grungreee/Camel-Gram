@@ -15,4 +15,4 @@ async def messages(receiver_id: int, page: int, token: str = Depends(oauth2_sche
         raise HTTPException(status_code=401, detail="Invalid token")
 
     raw_messages = await get_messages(payload["user_id"], receiver_id, page)
-    return [GetMessagesResponse(id=m[0], message=m[1], timestamp=m[2], sender_display_name=m[3]) for m in raw_messages]
+    return [GetMessagesResponse(id=m[0], message=m[1], timestamp=m[2], display_name=m[3]) for m in raw_messages]

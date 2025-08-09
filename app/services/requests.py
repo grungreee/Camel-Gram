@@ -10,6 +10,9 @@ from app.gui.context import AppContext
 
 def make_request(method: Literal["get", "post"], endpoint: str, data: dict | None = None,
                  with_loading_window: bool = True, with_token: bool = False) -> tuple[int, dict | list]:
+    if with_loading_window:
+        AppContext.loading_window.start_loading()
+
     if with_token:
         token: str | None = get_validation_key()
 
@@ -19,9 +22,6 @@ def make_request(method: Literal["get", "post"], endpoint: str, data: dict | Non
         headers = {"Authorization": f"Bearer {token}"}
     else:
         headers: dict | None = None
-
-    if with_loading_window:
-        AppContext.loading_window.start_loading()
 
     try:
         url: str = f"http://{app.settings.url}/{endpoint}"
@@ -44,4 +44,3 @@ def make_request(method: Literal["get", "post"], endpoint: str, data: dict | Non
 
         showerror("Error", "Server is not available. Please try again later.")
         return 0, {}
-

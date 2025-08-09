@@ -1,9 +1,10 @@
 import customtkinter as ctk
 import app.settings
+import threading
 from PIL import Image
 from typing import TYPE_CHECKING
+from datetime import datetime
 from app.services.auth_controller import handle_logout
-from app.gui.context import AppContext
 from app.services.handle_requests import handle_search, handle_change_display_name, handle_get_messages
 from app.services.utils import iso_to_hm
 
@@ -29,7 +30,7 @@ class ChatWindow(ctk.CTkFrame):
 
         self.debounce_timer: str | None = None
         self.current_chat: tuple[ctk.CTkFrame, dict] | None = None
-        self.last_message_frame: ctk.CTkFrame | None = None
+        self.first_message_frame: ctk.CTkFrame | None = None
 
     def setup_chat_ui(self, _=None) -> None:
         self.parent.title(self.parent.title_text)
@@ -234,6 +235,14 @@ class ChatWindow(ctk.CTkFrame):
                 self.parent.ws_client.send(data)
                 self.textbox.delete(1.0, ctk.END)
 
+                message: dict = {
+                    "display_name": app.settings.account_data["display_name"],
+                    "timestamp": datetime.now().isoformat(),
+                    "message": text
+                }
+
+                self.init_messages([message], new_message=True)
+
         def on_enter(event):
             if event.state & 0x0001:
                 self.textbox.insert("insert", "\n")
@@ -302,39 +311,43 @@ class ChatWindow(ctk.CTkFrame):
             handle_get_messages()
 
     def init_messages(self, messages: list[dict], new_message: bool = False) -> None:
-        AppContext.loading_window.start_loading()
+        messages_frames: dict[ctk.CTkFrame, dict] = {}
 
-        for message in messages:
+        for message in reversed(messages):
             message_frame = ctk.CTkFrame(self.messages_frame, fg_color="#343434", corner_radius=17, border_width=0,
                                          height=70, width=90)
 
-            if self.last_message_frame is not None and self.last_message_frame.winfo_exists() and not new_message:
-                message_frame.pack(padx=10, pady=10, anchor=ctk.W, before=self.last_message_frame)
+            if self.first_message_frame is not None and self.first_message_frame.winfo_exists() and not new_message:
+                message_frame.pack(padx=10, pady=10, anchor=ctk.W, before=self.first_message_frame)
+                self.first_message_frame = message_frame
             else:
                 message_frame.pack(padx=10, pady=10, anchor=ctk.W)
 
-            self.last_message_frame = message_frame
+            messages_frames[message_frame] = message
 
-            content_frame = ctk.CTkFrame(message_frame, fg_color="transparent", corner_radius=0, border_width=0)
-            content_frame.pack(fill=ctk.BOTH, expand=True, padx=10, pady=10)
+        for frame, message in messages_frames.items():
+            def load_message(message_: dict) -> None:
+                content_frame = ctk.CTkFrame(frame, fg_color="transparent", corner_radius=0, border_width=0)
+                content_frame.pack(fill=ctk.BOTH, expand=True, padx=10, pady=10)
 
-            ctk.CTkLabel(content_frame, text=message["sender_display_name"],
-                         font=("Arial", 14, "bold"), justify=ctk.LEFT,
-                         wraplength=300).pack(side=ctk.TOP, anchor=ctk.W, padx=(0, 30))
+                ctk.CTkLabel(content_frame, text=message_["display_name"],
+                             font=("Arial", 14, "bold"), justify=ctk.LEFT,
+                             wraplength=300).pack(side=ctk.TOP, anchor=ctk.W, padx=(0, 30))
 
-            bottom_frame = ctk.CTkFrame(content_frame, fg_color="transparent", corner_radius=0, border_width=0)
-            bottom_frame.pack(side=ctk.BOTTOM, fill=ctk.X)
+                bottom_frame = ctk.CTkFrame(content_frame, fg_color="transparent", corner_radius=0, border_width=0)
+                bottom_frame.pack(side=ctk.BOTTOM, fill=ctk.X)
 
-            ctk.CTkLabel(bottom_frame, text=message["message"], justify=ctk.LEFT,
-                         wraplength=300).pack(side=ctk.LEFT, anchor=ctk.W)
+                ctk.CTkLabel(bottom_frame, text=message_["message"], justify=ctk.LEFT,
+                             wraplength=300).pack(side=ctk.LEFT, anchor=ctk.W)
 
-            ctk.CTkLabel(bottom_frame, text=iso_to_hm(message["timestamp"])
-                         ).pack(side=ctk.RIGHT, padx=(10, 0), anchor=ctk.SE)
+                ctk.CTkLabel(bottom_frame, text=iso_to_hm(message_["timestamp"])
+                             ).pack(side=ctk.RIGHT, padx=(10, 0), anchor=ctk.SE)
 
-        # noinspection PyProtectedMember
-        # noinspection PyTypeChecker
-        self.after(100, lambda: self.messages_frame._parent_canvas.yview_moveto(1.0))
-        AppContext.loading_window.finish_loading()
+                # noinspection PyProtectedMember
+                # noinspection PyTypeChecker
+                self.parent.after(100, lambda: self.messages_frame._parent_canvas.yview_moveto(1.0))
+
+            threading.Thread(target=load_message, args=(message,)).start()
 
     @staticmethod
     def clear_frame(frame: ctk.CTkFrame) -> None:

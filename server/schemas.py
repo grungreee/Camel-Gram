@@ -32,4 +32,4 @@ class GetMessagesResponse(BaseModel):
     id: int
     message: str
     timestamp: datetime
-    sender_display_name: str
+    display_name: str
