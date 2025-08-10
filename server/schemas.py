@@ -29,7 +29,18 @@ class DisplayNameChangeRequest(BaseModel):
 
 
 class GetMessagesResponse(BaseModel):
-    id: int
+    user_id: int
     message: str
     timestamp: datetime
     display_name: str
+
+
+class UserResponse(BaseModel):
+    user_id: int
+    username: str
+    display_name: str
+
+
+class GetChatsResponse(UserResponse):
+    last_message: str
+    timestamp: datetime

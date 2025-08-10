@@ -1,5 +1,7 @@
 import threading
 import app.settings
+from app.schemas import AccountData
+from app.services.handle_requests import handle_get_chats
 from app.services.requests import make_request
 from app.gui.context import AppContext
 from tkinter.messagebox import showerror, showinfo, askyesno
@@ -80,10 +82,11 @@ def check_validation() -> None:
     response_status, response = make_request(method="get", endpoint="me", with_token=True)
 
     if response_status == 200:
-        app.settings.account_data = response
+        app.settings.account_data = AccountData(**response)
         AppContext.main_window.ws_client = WebSocketClient()
         AppContext.main_window.ws_client.connect()
         AppContext.main_window.navigation.navigate_to(WindowState.MAIN_CHAT)
+        handle_get_chats()
     elif response_status == 401:
         delete_validation_key()
     elif response_status == 1:

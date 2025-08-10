@@ -1,31 +1,32 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
-from server.db.models import users_table
-from server.db.core import get_user_fields_by_id, search_username, change_display_name
+from server.db.core import get_user_by_id, search_username, change_display_name
 from server.utils.jwt import verify_access_token
-from server.schemas import DisplayNameChangeRequest
+from server.schemas import DisplayNameChangeRequest, UserResponse
 
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 
 @router.get("/me")
-async def me(token: str = Depends(oauth2_scheme)) -> dict:
-    payload = verify_access_token(token)
+async def me(token: str = Depends(oauth2_scheme)) -> UserResponse:
+    payload: dict | None = verify_access_token(token)
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid token")
 
-    row = await get_user_fields_by_id(payload["user_id"], users_table.c.username, users_table.c.display_name)
+    user_id: int = payload["user_id"]
+
+    row: list | None = await get_user_by_id(user_id)
 
     if not row:
         raise HTTPException(status_code=404, detail="User not found")
 
-    return {"username": row[0], "display_name": row[1]}
+    return UserResponse(user_id=user_id, username=row[0], display_name=row[1])
 
 
 @router.get("/search_user")
-async def search_user(text: str, token: str = Depends(oauth2_scheme)) -> dict:
-    payload = verify_access_token(token)
+async def search_user(text: str, token: str = Depends(oauth2_scheme)) -> list[UserResponse]:
+    payload: dict | None = verify_access_token(token)
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid token")
 
@@ -34,15 +35,15 @@ async def search_user(text: str, token: str = Depends(oauth2_scheme)) -> dict:
     if not rows:
         raise HTTPException(status_code=404, detail="User not found")
 
-    response: dict[str, list[dict[str, str]]] = {"users": []}
+    response: list[UserResponse] = []
 
     for row in rows:
         if row[0] != payload["user_id"]:
-            response["users"].append({"user_id": row[0], "username": row[1], "display_name": row[2]})
-        if len(response["users"]) == 10:
+            response.append(UserResponse(user_id=row[0], username=row[1], display_name=row[2]))
+        if len(response) == 10:
             break
 
-    if len(response["users"]) == 0:
+    if len(response) == 0:
         raise HTTPException(status_code=404, detail="User not found")
 
     return response
@@ -50,7 +51,7 @@ async def search_user(text: str, token: str = Depends(oauth2_scheme)) -> dict:
 
 @router.post("/change_display_name")
 async def change_display_name_(body: DisplayNameChangeRequest, token: str = Depends(oauth2_scheme)) -> None:
-    payload = verify_access_token(token)
+    payload: dict | None = verify_access_token(token)
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid token")
 

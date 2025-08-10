@@ -2,7 +2,7 @@ import json
 from datetime import datetime
 from fastapi import WebSocket, WebSocketDisconnect
 from server.utils.jwt import verify_access_token
-from server.db.core import insert_message
+from server.db.core import insert_message, insert_chats
 
 websocket_clients: dict[int, WebSocket] = {}
 
@@ -34,9 +34,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 if data["type"] == "send_message" and data["message"].strip():
                     receiver_id: int = data["receiver_id"]
 
-                    await insert_message(payload["user_id"], receiver_id, data["message"])
-
-                    data: dict = {
+                    new_message_data: dict = {
                         "type": "new_message",
                         "body": {
                             "sender_id": payload["user_id"],
@@ -46,10 +44,12 @@ async def websocket_endpoint(websocket: WebSocket):
                     }
 
                     if receiver_id in websocket_clients:
-                        await websocket_clients[receiver_id].send_json(data)
+                        await websocket_clients[receiver_id].send_json(new_message_data)
+
+                    await insert_message(payload["user_id"], receiver_id, data["message"])
+                    await insert_chats(payload["user_id"], receiver_id)
             except (json.JSONDecodeError, KeyError):
                 await websocket.send_json({"type": "error", "msg": "Invalid json data"})
 
     except WebSocketDisconnect:
         websocket_clients.pop(user_id)
-

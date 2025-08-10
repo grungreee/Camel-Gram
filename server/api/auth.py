@@ -16,12 +16,12 @@ router = APIRouter()
 async def register(user: RegisterRequest) -> RegisterResponse:
     all_users = await get_user_fields(users_table.c.username, users_table.c.email)
     usernames = {row[0] for row in all_users}
-    emails = {row[1] for row in all_users}
+    emails = [row[1] for row in all_users]
 
     if user.username in usernames:
         raise HTTPException(status_code=400, detail="Username already exists.")
-    if user.email in emails:
-        raise HTTPException(status_code=400, detail="Email already used.")
+    if emails.count(user.email) > 3:
+        raise HTTPException(status_code=400, detail="Email already used more than 3 times.")
 
     check = check_all(user.username, user.password, user.email)
     if check is not True:

@@ -1,8 +1,9 @@
-import random
+from app.schemas import AccountData
+import time
 
 local: bool = True
 test: bool = True
-session: str = str(random.randint(0, 999)) if test else ""
+session: str = "" if not test else time.time()
 url: str = "localhost:8000" if local else ""
 version: str = "1.0.0"
-account_data: dict | None = None
+account_data: AccountData | None = None

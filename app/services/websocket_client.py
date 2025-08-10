@@ -2,6 +2,7 @@ import threading
 import app.settings
 import json
 from app.gui.context import AppContext
+from app.schemas import MessageData, CurrentChat
 from app.services.utils import get_validation_key
 from tkinter.messagebox import showerror
 from websocket import WebSocketApp
@@ -21,17 +22,14 @@ class WebSocketClient:
 
         if message["type"] == "new_message":
             body: dict = message["body"]
-            current_chat: tuple | None = AppContext.main_window.chat_window.current_chat
+            current_chat: CurrentChat | None = AppContext.main_window.chat_window.current_chat
 
-            if current_chat is not None and current_chat[0].winfo_exists() and \
-                    current_chat[1]["user_id"] == body["sender_id"]:
-                message: dict = {
-                    "display_name": current_chat[1]["display_name"],
-                    "message": body["message"],
-                    "timestamp": body["timestamp"]
-                }
+            if current_chat.messages_frame is not None and current_chat.messages_frame.winfo_exists() and \
+                    current_chat.user.user_id == body["sender_id"]:
+                message_data = MessageData(display_name=current_chat.user.display_name, message=body["message"],
+                                           timestamp=body["timestamp"], user_id=body["sender_id"])
 
-                AppContext.main_window.chat_window.init_messages([message], new_message=True)
+                AppContext.main_window.chat_window.init_messages([message_data], new_message=True)
 
     def connect(self) -> None:
         threading.Thread(target=self.ws.run_forever, daemon=True).start()
