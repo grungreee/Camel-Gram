@@ -5,7 +5,7 @@ from tkinter.messagebox import showerror, showinfo
 from customtkinter.windows import CTkInputDialog
 from app.services.requests import make_request
 from app.gui.context import AppContext
-from app.schemas import ChatData, AccountData, ChatListItem, MessageData
+from app.schemas import ChatListItemData, AccountData, ChatListItem, MessageData
 
 
 def handle_search(text: str) -> None:
@@ -47,17 +47,17 @@ def handle_change_display_name(display_name_label: ctk.CTkLabel) -> None:
 
 def handle_get_messages() -> None:
     def get_messages() -> None:
+        receiver_id: int = AppContext.main_window.chat_window.current_chat.user.user_id
         data: dict = {
-            "receiver_id": AppContext.main_window.chat_window.current_chat.user.user_id,
+            "receiver_id": receiver_id,
             "page": 0,
         }
 
         response_status, response = make_request("get", "messages", data=data, with_token=True)
 
         if response_status == 200:
-            AppContext.main_window.chat_window.clear_frame(AppContext.main_window.chat_window.current_chat.
-                                                           messages_frame)
-            AppContext.main_window.chat_window.init_messages([MessageData(**body) for body in response])
+            AppContext.main_window.chat_window.messages_cache[receiver_id] = [MessageData(**body) for body in response]
+            AppContext.main_window.chat_window.init_messages(receiver_id, clear_messages_frame=True)
 
     threading.Thread(target=get_messages, daemon=True).start()
 
@@ -65,11 +65,12 @@ def handle_get_messages() -> None:
 def handle_get_chats() -> None:
     def get_chats() -> None:
         response_status, response = make_request("get", "chats", with_token=True,
-                                                 with_loading_window=False)
+                                                 with_loading_window=True)
 
         if response_status == 200:
             AppContext.main_window.chat_window.user_chats = [ChatListItem(frame=None, last_message_label=None,
-                                                                          timestamp_label=None, data=ChatData(**data))
+                                                                          timestamp_label=None,
+                                                                          data=ChatListItemData(**data))
                                                              for data in response]
 
         AppContext.main_window.chat_window.init_user_chats_list()

@@ -30,7 +30,9 @@ class WebSocketClient:
                 message_data = MessageData(display_name=current_chat.user.display_name, message=body["message"],
                                            timestamp=body["timestamp"], user_id=body["sender_id"])
 
-                AppContext.main_window.chat_window.init_messages([message_data], new_message=True)
+                AppContext.main_window.chat_window.messages_cache[body["sender_id"]].append(message_data)
+
+                AppContext.main_window.chat_window.init_messages(body["sender_id"], new_message=True)
 
             if chats_list_items:
                 for i, chat_list_item in enumerate(chats_list_items):

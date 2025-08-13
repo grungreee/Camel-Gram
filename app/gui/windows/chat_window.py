@@ -4,11 +4,12 @@ import threading
 from PIL import Image
 from typing import TYPE_CHECKING
 from datetime import datetime
-from app.schemas import AccountData, ChatData, ChatListItem, MessageData, CurrentChat
+from app.gui.context import AppContext
+from app.schemas import AccountData, ChatListItemData, ChatListItem, MessageData, CurrentChat
 from app.services.auth_controller import handle_logout
-from app.services.handle_requests import (handle_search, handle_change_display_name, handle_get_messages,
-                                          handle_get_chats)
+from app.services.handle_requests import handle_search, handle_change_display_name, handle_get_messages
 from app.services.utils import iso_to_hm
+from collections import defaultdict
 
 if TYPE_CHECKING:
     from app.gui.main_root import MainRoot  # noqa: F401
@@ -28,7 +29,7 @@ class ChatWindow(ctk.CTkFrame):
         self.debounce_timer: str | None = None
         self.user_chats: list[ChatListItem] = []
         self.current_chat: CurrentChat | None = None
-        self.first_message_frame: ctk.CTkFrame | None = None
+        self.messages_cache: dict[int, list[MessageData]] = defaultdict(list)
 
     def setup_chat_ui(self, _=None) -> None:
         self.parent.title(self.parent.title_text)
@@ -121,7 +122,7 @@ class ChatWindow(ctk.CTkFrame):
         search_entry.pack(side=ctk.RIGHT, padx=10, fill=ctk.X, expand=True)
         search_entry.bind("<FocusIn>", self.init_search_side)
 
-        handle_get_chats()
+        self.init_user_chats_list()
 
     def init_search_side(self, _=None) -> None:
         def cancel_search() -> None:
@@ -158,8 +159,8 @@ class ChatWindow(ctk.CTkFrame):
         ctk.CTkLabel(self.left_bottom_frame, text="Start typing to search",
                      font=("Arial", 15, "bold")).place(relx=0.5, rely=0.5, anchor=ctk.CENTER)
 
-    def bind_side_menu_frame(self, frame: ctk.CTkFrame, user: AccountData | None = None,
-                             is_unbind: bool = False) -> None:
+    def select_side_menu_frame(self, frame: ctk.CTkFrame, user: AccountData | None = None,
+                               unselect: bool = False) -> None:
         def bind(widget) -> None:
             widget.bind("<Button-1>", lambda _: self.choose_chat(frame, user))
             widget.bind("<Enter>", lambda _: frame.configure(fg_color="#444444"))
@@ -170,11 +171,11 @@ class ChatWindow(ctk.CTkFrame):
             widget.unbind("<Enter>")
             widget.unbind("<Leave>")
 
-        frame.configure(fg_color="#555555" if is_unbind else "transparent")
-        unbind(frame) if is_unbind else bind(frame)
+        frame.configure(fg_color="transparent" if unselect else "#555555")
+        bind(frame) if unselect else unbind(frame)
 
         for widget in frame.winfo_children():
-            unbind(widget) if is_unbind else bind(widget)
+            bind(widget) if unselect else unbind(widget)
 
     def init_chats_list(self, count: int) -> list[ctk.CTkFrame]:
         self.clear_frame(self.left_bottom_frame)
@@ -205,7 +206,7 @@ class ChatWindow(ctk.CTkFrame):
             frames: list[ctk.CTkFrame] = self.init_chats_list(len(self.user_chats))
 
             for i, body in enumerate(self.user_chats):
-                data: ChatData = body.data
+                data: ChatListItemData = body.data
                 frame: ctk.CTkFrame = frames[i]
 
                 top_frame = ctk.CTkFrame(frame, fg_color="transparent", corner_radius=0, border_width=0)
@@ -225,11 +226,14 @@ class ChatWindow(ctk.CTkFrame):
                 self.user_chats[i].timestamp_label = timestamp_label  # type: ignore
                 self.user_chats[i].last_message_label = last_message_label  # type: ignore
 
-                is_unbind: bool = True if self.current_chat and data.user_id == self.current_chat.user.user_id \
-                    else False
+                unselect: bool = False if self.current_chat and data.user_id == self.current_chat.user.user_id \
+                    else True
 
-                self.bind_side_menu_frame(frame, user=AccountData(user_id=data.user_id, display_name=data.display_name,
-                                                                  username=data.username), is_unbind=is_unbind)
+                user = AccountData(user_id=data.user_id, display_name=data.display_name, username=data.username)
+                self.select_side_menu_frame(frame, user=user, unselect=unselect)
+
+                if not unselect:
+                    self.current_chat.chat_list_frame = frame
 
     def init_search_results(self, results: list[AccountData] | None, text: str) -> None:
         self.clear_frame(self.left_bottom_frame)
@@ -237,36 +241,39 @@ class ChatWindow(ctk.CTkFrame):
         if not text.strip():
             ctk.CTkLabel(self.left_bottom_frame, text="Start typing to search",
                          font=("Arial", 15, "bold")).place(relx=0.5, rely=0.5, anchor=ctk.CENTER)
-        elif results is not None:
+        elif results:
             frames: list[ctk.CTkFrame] = self.init_chats_list(len(results))
 
             for i, user in enumerate(results):
                 frame = frames[i]
 
-                ctk.CTkLabel(frame, text=user.display_name, font=("Arial", 14, "bold"),
-                             wraplength=160, justify=ctk.LEFT,
-                             cursor="hand2").pack(side=ctk.TOP, anchor=ctk.W, padx=10, pady=(5, 0))
-                ctk.CTkLabel(frame, text=f"@{user.username}", font=("Arial", 12),
-                             cursor="hand2").pack(side=ctk.BOTTOM, anchor=ctk.W, padx=10, pady=(0, 5))
+                if frame.winfo_exists():
+                    ctk.CTkLabel(frame, text=user.display_name, font=("Arial", 14, "bold"),
+                                 wraplength=160, justify=ctk.LEFT,
+                                 cursor="hand2").pack(side=ctk.TOP, anchor=ctk.W, padx=10, pady=(5, 0))
+                    ctk.CTkLabel(frame, text=f"@{user.username}", font=("Arial", 12),
+                                 cursor="hand2").pack(side=ctk.BOTTOM, anchor=ctk.W, padx=10, pady=(0, 5))
 
-                self.bind_side_menu_frame(frame, user=user)
+                    self.select_side_menu_frame(frame, user=user, unselect=True)
+
         else:
             ctk.CTkLabel(self.left_bottom_frame, text="No results found",
                          font=("Arial", 15, "bold")).place(relx=0.5, rely=0.5, anchor=ctk.CENTER)
 
     def choose_chat(self, frame: ctk.CTkFrame, user: AccountData) -> None:
-        if self.current_chat is not None and self.current_chat.chats_list_frame.winfo_exists():
-            self.bind_side_menu_frame(frame=self.current_chat.chats_list_frame, user=self.current_chat.user)
+        if self.current_chat and self.current_chat.chat_list_frame.winfo_exists():
+            self.select_side_menu_frame(frame=self.current_chat.chat_list_frame, user=self.current_chat.user,
+                                        unselect=True)
 
-        if self.current_chat is None:
-            self.current_chat = CurrentChat(chats_list_frame=frame, user=user, messages_frame=None,
-                                            display_name_label=None, username_label=None, textbox=None)
+        if not self.current_chat:
+            self.current_chat = CurrentChat(chat_list_frame=frame, user=user, messages_frame=None,
+                                            display_name_label=None, username_label=None, textbox=None,
+                                            first_message_frame=None)
         else:
-            self.current_chat.chats_list_frame = frame
+            self.current_chat.chat_list_frame = frame
             self.current_chat.user = user
 
-        self.bind_side_menu_frame(frame, is_unbind=True)
-
+        self.select_side_menu_frame(frame)
         self.init_chat()
 
     def init_chat(self, is_close: bool = False) -> None:
@@ -298,11 +305,12 @@ class ChatWindow(ctk.CTkFrame):
                                       display_name=app.settings.account_data.display_name,
                                       timestamp=timestamp, message=text)
 
-                self.init_messages([message], new_message=True)
+                self.messages_cache[self.current_chat.user.user_id].append(message)
+
+                self.init_messages(self.current_chat.user.user_id, new_message=True)
 
         def on_enter(event):
             if event.state & 0x0001:
-                self.current_chat.textbox.insert("insert", "\n")
                 return None
             else:
                 send_message()
@@ -312,9 +320,10 @@ class ChatWindow(ctk.CTkFrame):
             self.clear_frame(self.right_upper_frame)
             self.clear_frame(self.right_bottom_frame)
 
-            if self.current_chat is not None:
-                if self.current_chat.chats_list_frame.winfo_exists():
-                    self.bind_side_menu_frame(frame=self.current_chat.chats_list_frame, user=self.current_chat.user)
+            if self.current_chat:
+                if self.current_chat.chat_list_frame.winfo_exists():
+                    self.select_side_menu_frame(frame=self.current_chat.chat_list_frame, user=self.current_chat.user,
+                                                unselect=True)
                 self.current_chat = None
 
             frame = ctk.CTkFrame(self.right_bottom_frame, fg_color="#343434", corner_radius=20)
@@ -371,54 +380,69 @@ class ChatWindow(ctk.CTkFrame):
 
                 self.parent.bind("<Return>", on_enter)
 
-            handle_get_messages()
-
-    def init_messages(self, messages: list[MessageData], new_message: bool = False) -> None:
-        messages_frames: dict[ctk.CTkFrame, MessageData] = {}
-
-        for message in reversed(messages):
-            color: str = "#444444" if message.display_name == app.settings.account_data.display_name else "#343434"
-
-            message_frame = ctk.CTkFrame(self.current_chat.messages_frame, fg_color=color, corner_radius=17,
-                                         border_width=0, height=70, width=90)
-
-            if self.first_message_frame is not None and self.first_message_frame.winfo_exists() and not new_message:
-                message_frame.pack(padx=10, pady=10, anchor=ctk.W, before=self.first_message_frame)
-                self.first_message_frame = message_frame
+            if self.current_chat.user.user_id not in self.messages_cache:
+                handle_get_messages()
             else:
-                message_frame.pack(padx=10, pady=10, anchor=ctk.W)
+                self.init_messages(self.current_chat.user.user_id, clear_messages_frame=True)
 
-            messages_frames[message_frame] = message
+    def init_messages(self, user_id: int, new_message: bool = False, clear_messages_frame: bool = False) -> None:
+        def init_():
+            if not new_message:
+                AppContext.loading_window.start_loading()
 
-        for frame, message in messages_frames.items():
-            def load_message(message_: MessageData) -> None:
-                content_frame = ctk.CTkFrame(frame, fg_color="transparent", corner_radius=0, border_width=0)
-                content_frame.pack(fill=ctk.BOTH, expand=True, padx=10, pady=10)
+            if clear_messages_frame:
+                self.clear_frame(self.current_chat.messages_frame)
 
-                ctk.CTkLabel(content_frame, text=message_.display_name,
-                             font=("Arial", 14, "bold"), justify=ctk.LEFT,
-                             wraplength=300).pack(side=ctk.TOP, anchor=ctk.W, padx=(0, 30))
+            messages_frames: dict[ctk.CTkFrame, MessageData] = {}
+            messages: list[MessageData] = self.messages_cache[user_id]
 
-                bottom_frame = ctk.CTkFrame(content_frame, fg_color="transparent", corner_radius=0, border_width=0)
-                bottom_frame.pack(side=ctk.BOTTOM, fill=ctk.X)
+            for message in reversed([messages[-1]] if new_message else messages):
+                color: str = "#444444" if message.display_name == app.settings.account_data.display_name else "#343434"
 
-                ctk.CTkLabel(bottom_frame, text=message_.message, justify=ctk.LEFT,
-                             wraplength=300).pack(side=ctk.LEFT, anchor=ctk.W)
+                message_frame = ctk.CTkFrame(self.current_chat.messages_frame, fg_color=color, corner_radius=17,
+                                             border_width=0, height=70, width=90)
 
-                ctk.CTkLabel(bottom_frame, text=iso_to_hm(message_.timestamp)
-                             ).pack(side=ctk.RIGHT, padx=(10, 0), anchor=ctk.SE)
+                if (self.current_chat.first_message_frame and self.current_chat.first_message_frame.winfo_exists()
+                        and not new_message):
+                    message_frame.pack(padx=10, pady=10, anchor=ctk.W, before=self.current_chat.first_message_frame)
+                    self.current_chat.first_message_frame = message_frame
+                else:
+                    message_frame.pack(padx=10, pady=10, anchor=ctk.W)
 
-                # noinspection PyProtectedMember
-                # noinspection PyTypeChecker
-                self.parent.after(100, lambda: self.current_chat.messages_frame._parent_canvas.yview_moveto(1.0))
+                messages_frames[message_frame] = message
 
-            # noinspection PyProtectedMember
-            # noinspection PyTypeChecker
-            self.parent.after(100, lambda: self.current_chat.messages_frame._parent_canvas.yview_moveto(1.0))
+            for frame, message in messages_frames.items():
+                def load_message(message_: MessageData) -> None:
+                    content_frame = ctk.CTkFrame(frame, fg_color="transparent", corner_radius=0, border_width=0)
+                    content_frame.pack(fill=ctk.BOTH, expand=True, padx=10, pady=10)
 
-            threading.Thread(target=load_message, args=(message,), daemon=True).start()
+                    ctk.CTkLabel(content_frame, text=message_.display_name,
+                                 font=("Arial", 14, "bold"), justify=ctk.LEFT,
+                                 wraplength=300).pack(side=ctk.TOP, anchor=ctk.W, padx=(0, 30))
+
+                    bottom_frame = ctk.CTkFrame(content_frame, fg_color="transparent", corner_radius=0, border_width=0)
+                    bottom_frame.pack(side=ctk.BOTTOM, fill=ctk.X)
+
+                    ctk.CTkLabel(bottom_frame, text=message_.message, justify=ctk.LEFT,
+                                 wraplength=300).pack(side=ctk.LEFT, anchor=ctk.W)
+
+                    ctk.CTkLabel(bottom_frame, text=iso_to_hm(message_.timestamp)).pack(side=ctk.RIGHT,
+                                                                                        padx=(10, 0), anchor=ctk.SE)
+
+                    # noinspection PyProtectedMember
+                    # noinspection PyTypeChecker
+                    self.parent.after(100, lambda: self.current_chat.messages_frame._parent_canvas.yview_moveto(1.0))
+
+                threading.Thread(target=load_message, args=(message,), daemon=True).start()
+
+            if not new_message:
+                AppContext.loading_window.finish_loading()
+
+        threading.Thread(target=init_, daemon=True).start()
 
     @staticmethod
-    def clear_frame(frame: ctk.CTkFrame | ctk.CTkScrollableFrame) -> None:
-        for widget in frame.winfo_children():
-            widget.destroy()
+    def clear_frame(frame: ctk.CTkFrame | ctk.CTkScrollableFrame | None) -> None:
+        if frame is not None:
+            for widget in frame.winfo_children():
+                if widget.winfo_exists() and frame.winfo_exists():
+                    widget.destroy()
