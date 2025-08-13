@@ -50,7 +50,7 @@ def handle_auth(username: str, password: str, email: str | None = None) -> None:
         except Exception as e:
             showerror(type(e).__name__, f"Error: {str(e)}")
 
-    threading.Thread(target=auth).start()
+    threading.Thread(target=auth, daemon=True).start()
 
 
 def handle_verify(code: str) -> None:
@@ -75,7 +75,7 @@ def handle_verify(code: str) -> None:
         except Exception as e:
             showerror(type(e).__name__, f"Error: {str(e)}")
 
-    threading.Thread(target=verify).start()
+    threading.Thread(target=verify, daemon=True).start()
 
 
 def check_validation() -> None:

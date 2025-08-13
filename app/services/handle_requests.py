@@ -5,7 +5,7 @@ from tkinter.messagebox import showerror, showinfo
 from customtkinter.windows import CTkInputDialog
 from app.services.requests import make_request
 from app.gui.context import AppContext
-from app.schemas import ChatData, AccountData, ChatItem, MessageData
+from app.schemas import ChatData, AccountData, ChatListItem, MessageData
 
 
 def handle_search(text: str) -> None:
@@ -19,7 +19,7 @@ def handle_search(text: str) -> None:
         AppContext.main_window.chat_window.init_search_results([AccountData(**data) for data in response]
                                                                if response_status == 200 else None, text)
 
-    threading.Thread(target=search).start()
+    threading.Thread(target=search, daemon=True).start()
 
 
 def handle_change_display_name(display_name_label: ctk.CTkLabel) -> None:
@@ -42,7 +42,7 @@ def handle_change_display_name(display_name_label: ctk.CTkLabel) -> None:
         except Exception as e:
             showerror(type(e).__name__, f"Error: {str(e)}")
 
-    threading.Thread(target=change_display_name).start()
+    threading.Thread(target=change_display_name, daemon=True).start()
 
 
 def handle_get_messages() -> None:
@@ -59,7 +59,7 @@ def handle_get_messages() -> None:
                                                            messages_frame)
             AppContext.main_window.chat_window.init_messages([MessageData(**body) for body in response])
 
-    threading.Thread(target=get_messages).start()
+    threading.Thread(target=get_messages, daemon=True).start()
 
 
 def handle_get_chats() -> None:
@@ -67,12 +67,11 @@ def handle_get_chats() -> None:
         response_status, response = make_request("get", "chats", with_token=True,
                                                  with_loading_window=False)
 
-        if response_status == 0:
-            return
+        if response_status == 200:
+            AppContext.main_window.chat_window.user_chats = [ChatListItem(frame=None, last_message_label=None,
+                                                                          timestamp_label=None, data=ChatData(**data))
+                                                             for data in response]
 
-        AppContext.main_window.chat_window.user_chats = [ChatItem(frame=None, last_message_label=None,
-                                                                  timestamp_label=None, data=ChatData(**data))
-                                                         for data in response]
         AppContext.main_window.chat_window.init_user_chats_list()
 
-    threading.Thread(target=get_chats).start()
+    threading.Thread(target=get_chats, daemon=True).start()

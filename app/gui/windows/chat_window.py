@@ -4,9 +4,10 @@ import threading
 from PIL import Image
 from typing import TYPE_CHECKING
 from datetime import datetime
-from app.schemas import AccountData, ChatData, ChatItem, MessageData, CurrentChat
+from app.schemas import AccountData, ChatData, ChatListItem, MessageData, CurrentChat
 from app.services.auth_controller import handle_logout
-from app.services.handle_requests import handle_search, handle_change_display_name, handle_get_messages
+from app.services.handle_requests import (handle_search, handle_change_display_name, handle_get_messages,
+                                          handle_get_chats)
 from app.services.utils import iso_to_hm
 
 if TYPE_CHECKING:
@@ -25,7 +26,7 @@ class ChatWindow(ctk.CTkFrame):
         self.right_bottom_frame: ctk.CTkFrame | None = None
 
         self.debounce_timer: str | None = None
-        self.user_chats: list[ChatItem] | None = None
+        self.user_chats: list[ChatListItem] = []
         self.current_chat: CurrentChat | None = None
         self.first_message_frame: ctk.CTkFrame | None = None
 
@@ -44,7 +45,7 @@ class ChatWindow(ctk.CTkFrame):
         self.left_bottom_frame.pack_propagate(False)
         self.left_bottom_frame.pack(fill=ctk.BOTH, expand=True)
 
-        self.init_main_left_side()
+        self.init_chats_list_side()
 
         right_side = ctk.CTkFrame(self, corner_radius=0, fg_color="transparent")
         right_side.pack_propagate(False)
@@ -53,12 +54,12 @@ class ChatWindow(ctk.CTkFrame):
         self.right_upper_frame = ctk.CTkFrame(right_side, corner_radius=0, height=50, fg_color="#292929")
         self.right_upper_frame.pack_propagate(False)
         self.right_upper_frame.pack(fill=ctk.X)
-        self.right_upper_frame.bind("<Button-1>", self.init_main_left_side)
+        self.right_upper_frame.bind("<Button-1>", self.init_chats_list_side)
 
         self.right_bottom_frame = ctk.CTkFrame(right_side, corner_radius=0, fg_color="transparent")
         self.right_bottom_frame.pack_propagate(False)
         self.right_bottom_frame.pack(fill=ctk.BOTH, expand=True)
-        self.right_bottom_frame.bind("<Button-1>", self.init_main_left_side)
+        self.right_bottom_frame.bind("<Button-1>", self.init_chats_list_side)
 
         self.parent.bind("<Escape>", lambda _: self.init_chat(is_close=True))
         self.init_chat(is_close=True)
@@ -71,7 +72,7 @@ class ChatWindow(ctk.CTkFrame):
                                         size=(18, 13))
         back_button = self.parent.styled_button(self.left_upper_frame, text="", height=30, width=40,
                                                 corner_radius=5, image=back_arrow_image,
-                                                command=self.init_main_left_side)
+                                                command=self.init_chats_list_side)
         back_button.pack(padx=(10, 0), side=ctk.LEFT)
 
         ctk.CTkLabel(self.left_bottom_frame, text="Account", font=("Arial", 17, "bold")
@@ -106,7 +107,7 @@ class ChatWindow(ctk.CTkFrame):
         self.parent.styled_button(account_info_frame, text="Logout", command=handle_logout
                                   ).pack(pady=10, padx=10, fill=ctk.X)
 
-    def init_main_left_side(self, _=None) -> None:
+    def init_chats_list_side(self, _=None) -> None:
         self.clear_frame(self.left_upper_frame)
         self.clear_frame(self.left_bottom_frame)
 
@@ -118,11 +119,11 @@ class ChatWindow(ctk.CTkFrame):
 
         search_entry = ctk.CTkEntry(self.left_upper_frame, placeholder_text="Search", height=30)
         search_entry.pack(side=ctk.RIGHT, padx=10, fill=ctk.X, expand=True)
-        search_entry.bind("<FocusIn>", self.init_search_left_side)
+        search_entry.bind("<FocusIn>", self.init_search_side)
 
-        self.init_user_chats_list()
+        handle_get_chats()
 
-    def init_search_left_side(self, _=None) -> None:
+    def init_search_side(self, _=None) -> None:
         def cancel_search() -> None:
             if self.debounce_timer:
                 self.after_cancel(self.debounce_timer)
@@ -130,7 +131,7 @@ class ChatWindow(ctk.CTkFrame):
 
         def back() -> None:
             cancel_search()
-            self.init_main_left_side()
+            self.init_chats_list_side()
 
         def on_text_change(*_) -> None:
             cancel_search()
@@ -176,6 +177,8 @@ class ChatWindow(ctk.CTkFrame):
             unbind(widget) if is_unbind else bind(widget)
 
     def init_chats_list(self, count: int) -> list[ctk.CTkFrame]:
+        self.clear_frame(self.left_bottom_frame)
+
         frame = ctk.CTkScrollableFrame(self.left_bottom_frame,
                                        fg_color="transparent", corner_radius=0,
                                        border_width=0, scrollbar_button_color="#444444",
@@ -195,7 +198,7 @@ class ChatWindow(ctk.CTkFrame):
         return frames
 
     def init_user_chats_list(self) -> None:
-        if self.user_chats is None:
+        if not self.user_chats:
             ctk.CTkLabel(self.left_bottom_frame, text="You dont have chats.",
                          font=("Arial", 15, "bold")).place(relx=0.5, rely=0.5, anchor=ctk.CENTER)
         else:
@@ -222,8 +225,11 @@ class ChatWindow(ctk.CTkFrame):
                 self.user_chats[i].timestamp_label = timestamp_label  # type: ignore
                 self.user_chats[i].last_message_label = last_message_label  # type: ignore
 
+                is_unbind: bool = True if self.current_chat and data.user_id == self.current_chat.user.user_id \
+                    else False
+
                 self.bind_side_menu_frame(frame, user=AccountData(user_id=data.user_id, display_name=data.display_name,
-                                                                  username=data.username))
+                                                                  username=data.username), is_unbind=is_unbind)
 
     def init_search_results(self, results: list[AccountData] | None, text: str) -> None:
         self.clear_frame(self.left_bottom_frame)
@@ -277,9 +283,20 @@ class ChatWindow(ctk.CTkFrame):
                 self.parent.ws_client.send(data)
                 self.current_chat.textbox.delete(1.0, ctk.END)
 
+                timestamp: str = datetime.now().isoformat()
+
+                if self.user_chats:
+                    for i, chat_list_item in enumerate(self.user_chats):
+                        if chat_list_item.data.user_id == self.current_chat.user.user_id:
+                            if chat_list_item.last_message_label and chat_list_item.last_message_label.winfo_exists():
+                                chat_list_item.last_message_label.configure(text=text)
+                                chat_list_item.timestamp_label.configure(text=iso_to_hm(timestamp))
+                            self.user_chats[i].data.last_message = text
+                            self.user_chats[i].data.timestamp = timestamp
+
                 message = MessageData(user_id=app.settings.account_data.user_id,
                                       display_name=app.settings.account_data.display_name,
-                                      timestamp=datetime.now().isoformat(), message=text)
+                                      timestamp=timestamp, message=text)
 
                 self.init_messages([message], new_message=True)
 
@@ -324,8 +341,9 @@ class ChatWindow(ctk.CTkFrame):
                 username_label.pack(padx=15, anchor=ctk.W, side=ctk.BOTTOM)
                 self.current_chat.username_label = username_label
 
-                messages_frame = ctk.CTkScrollableFrame(self.right_bottom_frame, fg_color="transparent", corner_radius=0,
-                                                        border_width=0, scrollbar_button_color="#444444",
+                messages_frame = ctk.CTkScrollableFrame(self.right_bottom_frame, fg_color="transparent",
+                                                        corner_radius=0, border_width=0,
+                                                        scrollbar_button_color="#444444",
                                                         scrollbar_button_hover_color="#545454")
                 messages_frame.pack(fill=ctk.BOTH, expand=True)
 
@@ -391,13 +409,14 @@ class ChatWindow(ctk.CTkFrame):
                              ).pack(side=ctk.RIGHT, padx=(10, 0), anchor=ctk.SE)
 
                 # noinspection PyProtectedMember
-                self.current_chat.messages_frame._parent_canvas.yview_moveto(1.0)
+                # noinspection PyTypeChecker
+                self.parent.after(100, lambda: self.current_chat.messages_frame._parent_canvas.yview_moveto(1.0))
 
             # noinspection PyProtectedMember
             # noinspection PyTypeChecker
             self.parent.after(100, lambda: self.current_chat.messages_frame._parent_canvas.yview_moveto(1.0))
 
-            threading.Thread(target=load_message, args=(message,)).start()
+            threading.Thread(target=load_message, args=(message,), daemon=True).start()
 
     @staticmethod
     def clear_frame(frame: ctk.CTkFrame | ctk.CTkScrollableFrame) -> None:
