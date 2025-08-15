@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from enum import Enum
 from customtkinter import CTkFrame, CTkLabel, CTkScrollableFrame, CTkTextbox
 
 
@@ -43,3 +44,16 @@ class CurrentChat:  # Right frames chat data
     first_message_frame: CTkFrame | None
     textbox: CTkTextbox | None
     user: AccountData
+
+
+class CurrentSideMenuState(Enum):
+    CHATS = "chats"
+    SETTINGS = "settings"
+    SEARCHING = "searching"
+
+
+class WindowState(Enum):
+    AUTH_LOGIN = "auth_login"
+    AUTH_REGISTER = "auth_register"
+    VERIFY = "verify"
+    MAIN_CHAT = "main_chat"

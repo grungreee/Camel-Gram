@@ -2,10 +2,10 @@ import customtkinter as ctk
 from PIL import Image
 from typing import TYPE_CHECKING
 from app.services.auth_controller import handle_verify
-from app.gui.navigation_controller import WindowState
+from app.schemas import WindowState
 
 if TYPE_CHECKING:
-    from app.gui.main_root import MainRoot
+    from app.gui.main_root import MainRoot  # noqa: F401
 
 
 class VerifyWindow(ctk.CTkFrame):

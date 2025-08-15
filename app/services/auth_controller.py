@@ -6,7 +6,7 @@ from app.services.requests import make_request
 from app.gui.context import AppContext
 from tkinter.messagebox import showerror, showinfo, askyesno
 from app.services.utils import check_all, hash_password
-from app.gui.navigation_controller import WindowState
+from app.schemas import WindowState
 from app.services.utils import set_validation_key, delete_validation_key
 from app.services.websocket_client import WebSocketClient
 

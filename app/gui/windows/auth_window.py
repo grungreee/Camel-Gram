@@ -1,12 +1,12 @@
 import customtkinter as ctk
 from PIL import Image
 from typing import Literal, TYPE_CHECKING
-from app.gui.navigation_controller import WindowState
+from app.schemas import WindowState
 from app.services.auth_controller import handle_auth
 from app.services.utils import check_all
 
 if TYPE_CHECKING:
-    from app.gui.main_root import MainRoot
+    from app.gui.main_root import MainRoot  # noqa: F401
 
 
 class AuthWindow(ctk.CTkFrame):

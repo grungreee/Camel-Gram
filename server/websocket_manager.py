@@ -38,6 +38,8 @@ async def websocket_endpoint(websocket: WebSocket):
                         "type": "new_message",
                         "body": {
                             "sender_id": payload["user_id"],
+                            "display_name": data["display_name"],
+                            "username": data["username"],
                             "message": data["message"],
                             "timestamp": datetime.now().isoformat()
                         }

@@ -68,10 +68,13 @@ def handle_get_chats() -> None:
                                                  with_loading_window=True)
 
         if response_status == 200:
-            AppContext.main_window.chat_window.user_chats = [ChatListItem(frame=None, last_message_label=None,
-                                                                          timestamp_label=None,
-                                                                          data=ChatListItemData(**data))
-                                                             for data in response]
+            new_user_chats: dict[int, ChatListItem] = {
+                data["user_id"]: ChatListItem(frame=None, last_message_label=None, timestamp_label=None,
+                                              data=ChatListItemData(**data))
+                for data in response
+            }
+
+            AppContext.main_window.chat_window.user_chats = new_user_chats
 
         AppContext.main_window.chat_window.init_user_chats_list()
 

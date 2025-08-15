@@ -4,7 +4,7 @@ from json import JSONDecodeError
 from typing import Literal
 from tkinter.messagebox import showerror, showinfo
 from app.services.utils import get_validation_key
-from app.gui.navigation_controller import WindowState
+from app.schemas import WindowState
 from app.gui.context import AppContext
 
 

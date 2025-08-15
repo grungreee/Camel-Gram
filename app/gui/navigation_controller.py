@@ -1,11 +1,4 @@
-from enum import Enum
-
-
-class WindowState(Enum):
-    AUTH_LOGIN = "auth_login"
-    AUTH_REGISTER = "auth_register"
-    VERIFY = "verify"
-    MAIN_CHAT = "main_chat"
+from app.schemas import WindowState
 
 
 class NavigationController:
