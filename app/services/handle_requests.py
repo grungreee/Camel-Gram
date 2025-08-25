@@ -5,7 +5,7 @@ from tkinter.messagebox import showerror, showinfo
 from customtkinter.windows import CTkInputDialog
 from app.services.requests import make_request
 from app.gui.context import AppContext
-from app.schemas import ChatListItemData, AccountData, ChatListItem, MessageData
+from app.schemas import ChatListItemData, AccountData, ChatListItem, MessageData, MessageStatus
 
 
 def handle_search(text: str) -> None:
@@ -56,8 +56,22 @@ def handle_get_messages() -> None:
         response_status, response = make_request("get", "messages", data=data, with_token=True)
 
         if response_status == 200:
-            AppContext.main_window.chat_window.messages_cache[receiver_id] = [MessageData(**body) for body in response]
-            AppContext.main_window.chat_window.init_messages(receiver_id, clear_messages_frame=True)
+            messages: dict[int, MessageData] = {}
+
+            for body in response:
+                message: MessageData = MessageData(
+                    timestamp_label=None,
+                    status_label=None,
+                    message_id=body["message_id"],
+                    display_name=body["display_name"],
+                    timestamp=body["timestamp"],
+                    message=body["message"],
+                    status=MessageStatus(body["status"])
+                )
+
+                messages[body["message_id"]] = message
+                AppContext.main_window.chat_window.messages_cache[receiver_id][body["message_id"]] = message
+            AppContext.main_window.chat_window.init_messages(messages, receiver_id, clear_messages_frame=True)
 
     threading.Thread(target=get_messages, daemon=True).start()
 

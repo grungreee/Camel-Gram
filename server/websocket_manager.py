@@ -1,8 +1,7 @@
 import json
-from datetime import datetime
 from fastapi import WebSocket, WebSocketDisconnect
 from server.utils.jwt import verify_access_token
-from server.db.core import insert_message, insert_chats
+from server.db.core import insert_message
 
 websocket_clients: dict[int, WebSocket] = {}
 
@@ -16,6 +15,11 @@ async def websocket_endpoint(websocket: WebSocket):
         return
 
     user_id: int = payload["user_id"]
+
+    if user_id in websocket_clients:
+        await websocket.close(1008, "User already connected")
+        return
+
     websocket_clients[user_id] = websocket
 
     await websocket.accept()
@@ -31,25 +35,39 @@ async def websocket_endpoint(websocket: WebSocket):
                     websocket_clients.pop(user_id)
                     return
 
-                if data["type"] == "send_message" and data["message"].strip():
+                if data["type"] == "send_message":
                     receiver_id: int = data["receiver_id"]
+                    message: str = data["message"]
+
+                    message_id, timestamp, username, display_name = await insert_message(user_id, receiver_id, message)
+
+                    message_ack_data: dict = {
+                        "type": "message_ack",
+                        "user_id": receiver_id,
+                        "temp_id": data["temp_id"],
+                        "timestamp": timestamp.isoformat(),
+                        "message_id": message_id,
+                    }
+
+                    await websocket.send_json(message_ack_data)
 
                     new_message_data: dict = {
                         "type": "new_message",
-                        "body": {
-                            "sender_id": payload["user_id"],
-                            "display_name": data["display_name"],
-                            "username": data["username"],
-                            "message": data["message"],
-                            "timestamp": datetime.now().isoformat()
-                        }
+                        "message_id": message_id,
+                        "sender_id": payload["user_id"],
+                        "display_name": display_name,
+                        "username": username,
+                        "message": message,
+                        "timestamp": timestamp.isoformat(),
+                        "status": "received"
                     }
 
                     if receiver_id in websocket_clients:
                         await websocket_clients[receiver_id].send_json(new_message_data)
 
-                    await insert_message(payload["user_id"], receiver_id, data["message"])
-                    await insert_chats(payload["user_id"], receiver_id)
+                elif data["type"] == "read_message":
+                    pass
+
             except (json.JSONDecodeError, KeyError):
                 await websocket.send_json({"type": "error", "msg": "Invalid json data"})
 

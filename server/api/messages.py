@@ -16,7 +16,8 @@ async def messages(receiver_id: int, page: int, token: str = Depends(oauth2_sche
 
     raw_messages: list = await get_messages(payload["user_id"], receiver_id, page)
 
-    return [GetMessagesResponse(user_id=m[0], message=m[1], timestamp=m[2], display_name=m[3]) for m in raw_messages]
+    return [GetMessagesResponse(message_id=m[0], message=m[1], timestamp=m[2], display_name=m[3],
+                                status="read" if m[4] else "received") for m in raw_messages]
 
 
 @router.get("/chats")

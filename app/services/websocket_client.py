@@ -2,6 +2,7 @@ import threading
 import app.settings
 import json
 from app.gui.context import AppContext
+from app.schemas import MessageStatus
 from app.services.utils import get_validation_key
 from tkinter.messagebox import showerror
 from websocket import WebSocketApp, WebSocketConnectionClosedException
@@ -13,25 +14,27 @@ class WebSocketClient:
         self.ws = WebSocketApp(
             url=f"ws://{app.settings.url}/ws?token={get_validation_key()}",
             on_message=self.on_message,
+            on_close=self.on_close
         )
 
     @staticmethod
     def on_message(_, message: str) -> None:
-        message: dict = json.loads(message)
+        body: dict = json.loads(message)
 
-        if message["type"] == "new_message":
-            body: dict = message["body"]
-
-            kwargs: dict = {
-                "text": body["message"],
-                "user_id": body["sender_id"],
-                "chat_with_id": body["sender_id"],
-                "timestamp": body["timestamp"],
-                "display_name": body["display_name"],
-                "username": body["username"]
-            }
-
-            AppContext.main_window.chat_window.handle_new_message(**kwargs)
+        match body["type"]:
+            case "new_message":
+                (AppContext.main_window.
+                 chat_window.handle_new_message(text=body["message"], message_id=body["message_id"],
+                                                user_id=body["sender_id"], timestamp=body["timestamp"],
+                                                display_name=body["display_name"], username=body["username"],
+                                                status=MessageStatus(body["status"])))
+            case "message_ack":
+                (AppContext.main_window.
+                 chat_window.change_message_status(user_id=body["user_id"], message_id=body["message_id"],
+                                                   status=MessageStatus.RECEIVED, timestamp=body["timestamp"],
+                                                   temp_id=body["temp_id"]))
+            case _:
+                print(body)
 
     def connect(self) -> None:
         threading.Thread(target=self.ws.run_forever, daemon=True).start()
@@ -53,3 +56,7 @@ class WebSocketClient:
 
     def close(self) -> None:
         self.ws.close()
+
+    @staticmethod
+    def on_close(*_) -> None:
+        AppContext.main_window.destroy()

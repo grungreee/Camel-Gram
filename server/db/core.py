@@ -1,5 +1,4 @@
-from sqlalchemy import select, Column, case, func
-from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy import select, Column, case, func, text
 from server.db.models import metadata_obj, users_table, messages_table, chats_table
 from server.db.database import sync_engine, async_engine
 from typing import Any
@@ -7,6 +6,9 @@ from datetime import datetime
 
 
 def create_tables() -> None:
+    messages_table.drop(sync_engine, checkfirst=True)
+    chats_table.drop(sync_engine, checkfirst=True)
+
     metadata_obj.create_all(sync_engine)
 
 
@@ -66,11 +68,37 @@ async def change_display_name(user_id: int, new_display_name: str) -> None:
         await conn.execute(stmt)
 
 
-async def insert_message(sender_id: int, receiver_id: int, message: str) -> None:
-    stmt = messages_table.insert().values(sender_id=sender_id, receiver_id=receiver_id, message=message)
+async def insert_message(sender_id: int, receiver_id: int, message: str) -> tuple[int, datetime, str, str]:
+    query = text("""
+        WITH 
+        inserted_message AS (
+            INSERT INTO camelgram_removeglad.messages (sender_id, receiver_id, message, timestamp, is_read)
+            VALUES (:sender_id, :receiver_id, :message, NOW(), FALSE)
+            RETURNING id, timestamp, sender_id
+        ),
+        inserted_chats AS (
+            INSERT INTO camelgram_removeglad.chats (user_id, partner_id)
+            VALUES 
+                (:sender_id, :receiver_id),
+                (:receiver_id, :sender_id)
+            ON CONFLICT (user_id, partner_id) DO NOTHING
+        )
+        SELECT 
+            im.id,
+            im.timestamp,
+            u.username, 
+            u.display_name
+        FROM inserted_message im
+        JOIN camelgram_removeglad.users u ON u.id = im.sender_id;
+    """)
 
     async with async_engine.begin() as conn:
-        await conn.execute(stmt)
+        result = await conn.execute(query, {
+            "sender_id": sender_id,
+            "receiver_id": receiver_id,
+            "message": message
+        })
+        return result.first()
 
 
 async def get_messages(sender_id: int, receiver_id: int, page: int) -> list[tuple[int, str, datetime, str]]:
@@ -79,7 +107,8 @@ async def get_messages(sender_id: int, receiver_id: int, page: int) -> list[tupl
         messages_table.c.id,
         messages_table.c.message,
         messages_table.c.timestamp,
-        users_table.c.display_name
+        users_table.c.display_name,
+        messages_table.c.is_read
     ).join(users_table, users_table.c.id == messages_table.c.sender_id).where(
         ((messages_table.c.sender_id == sender_id) & (messages_table.c.receiver_id == receiver_id)) |
         ((messages_table.c.sender_id == receiver_id) & (messages_table.c.receiver_id == sender_id))
@@ -135,12 +164,3 @@ async def get_chats(user_id: int) -> list[tuple[int, str, str]]:
         result = await conn.execute(stmt)
 
     return result.all()
-
-
-async def insert_chats(sender_id: int, receiver_id: int) -> None:
-    stmt1 = insert(chats_table).values(user_id=sender_id, partner_id=receiver_id).on_conflict_do_nothing()
-    stmt2 = insert(chats_table).values(user_id=receiver_id, partner_id=sender_id).on_conflict_do_nothing()
-
-    async with async_engine.begin() as conn:
-        await conn.execute(stmt1)
-        await conn.execute(stmt2)

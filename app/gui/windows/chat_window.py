@@ -1,3 +1,4 @@
+import uuid
 import customtkinter as ctk
 import app.settings
 import threading
@@ -5,10 +6,11 @@ from PIL import Image
 from typing import TYPE_CHECKING
 from datetime import datetime
 from app.gui.context import AppContext
-from app.schemas import AccountData, ChatListItemData, ChatListItem, MessageData, CurrentChat, CurrentSideMenuState
+from app.schemas import (AccountData, ChatListItemData, ChatListItem, MessageData, CurrentChat, CurrentSideMenuState,
+                         MessageStatus)
 from app.services.auth_controller import handle_logout
 from app.services.handle_requests import handle_search, handle_change_display_name, handle_get_messages
-from app.services.utils import iso_to_hm
+from app.services.utils import iso_to_hm, MessageList
 from collections import defaultdict
 
 if TYPE_CHECKING:
@@ -30,7 +32,7 @@ class ChatWindow(ctk.CTkFrame):
         self.debounce_timer: str | None = None
         self.user_chats: dict[int, ChatListItem] = {}
         self.current_chat: CurrentChat | None = None
-        self.messages_cache: dict[int, list[MessageData]] = defaultdict(list)
+        self.messages_cache: dict[int, MessageList] = defaultdict(MessageList)
 
     def setup_chat_ui(self, _=None) -> None:
         self.parent.title(self.parent.title_text)
@@ -209,10 +211,12 @@ class ChatWindow(ctk.CTkFrame):
                          font=("Arial", 15, "bold")).place(relx=0.5, rely=0.5, anchor=ctk.CENTER)
         else:
             frames: list[ctk.CTkFrame] = self.init_chats_list(len(self.user_chats))
+            sorted_user_chats = sorted(self.user_chats.items(),
+                                       key=lambda x: datetime.fromisoformat(x[1].data.timestamp), reverse=True)
 
             i: int = 0
 
-            for key, value in self.user_chats.items():
+            for key, value in sorted_user_chats:
                 data: ChatListItemData = value.data
                 frame: ctk.CTkFrame = frames[i]
 
@@ -277,7 +281,7 @@ class ChatWindow(ctk.CTkFrame):
         if not self.current_chat:
             self.current_chat = CurrentChat(chat_list_frame=frame, user=user, messages_frame=None,
                                             display_name_label=None, username_label=None, textbox=None,
-                                            first_message_frame=None)
+                                            first_message_frame=None, last_message_frame=None)
         else:
             self.current_chat.chat_list_frame = frame
             self.current_chat.user = user
@@ -289,22 +293,22 @@ class ChatWindow(ctk.CTkFrame):
         def send_message() -> None:
             text: str = self.current_chat.textbox.get(1.0, ctk.END).strip()
 
-            if text:
+            if text.strip():
+                temp_id = str(uuid.uuid4())
+
                 data: dict = {
                     "type": "send_message",
+                    "temp_id": temp_id,
                     "receiver_id": self.current_chat.user.user_id,
-                    "display_name": app.settings.account_data.display_name,
-                    "username": app.settings.account_data.username,
                     "message": text
                 }
 
                 self.parent.ws_client.send(data)
 
-                self.handle_new_message(text=text, user_id=app.settings.account_data.user_id,
-                                        chat_with_id=self.current_chat.user.user_id,
+                self.handle_new_message(text=text, message_id=temp_id, user_id=self.current_chat.user.user_id,
                                         timestamp=datetime.now().isoformat(),
                                         display_name=self.current_chat.user.display_name,
-                                        username=self.current_chat.user.username)
+                                        username=self.current_chat.user.username, status=MessageStatus.SENT)
                 self.current_chat.textbox.delete(1.0, ctk.END)
 
         def on_enter(event):
@@ -334,6 +338,8 @@ class ChatWindow(ctk.CTkFrame):
                 self.current_chat.display_name_label.configure(text=self.current_chat.user.display_name)
                 self.current_chat.username_label.configure(text=f"@{self.current_chat.user.username}")
                 self.current_chat.textbox.delete(1.0, ctk.END)
+                # noinspection PyProtectedMember
+                self.current_chat.messages_frame._parent_canvas.yview_moveto(0.0)
             else:
                 self.clear_frame(self.right_upper_frame)
                 self.clear_frame(self.right_bottom_frame)
@@ -381,40 +387,47 @@ class ChatWindow(ctk.CTkFrame):
             if self.current_chat.user.user_id not in self.messages_cache:
                 handle_get_messages()
             else:
-                self.init_messages(self.current_chat.user.user_id, clear_messages_frame=True)
+                self.init_messages(self.messages_cache[self.current_chat.user.user_id].dict,
+                                   self.current_chat.user.user_id,
+                                   clear_messages_frame=True)
 
-    def handle_new_message(self, text: str, user_id: int, chat_with_id: int, timestamp: str, display_name: str,
-                           username: str) -> None:
-        if chat_with_id in self.user_chats:
-            chat_list_item = self.user_chats[chat_with_id]
+    def handle_new_message(self, text: str, message_id: str | int, user_id: int, timestamp: str, display_name: str,
+                           username: str, status: MessageStatus) -> None:
+        if user_id in self.user_chats:  # If the chat already exists
+            chat_list_item = self.user_chats[user_id]
 
-            if chat_list_item.last_message_label and chat_list_item.last_message_label.winfo_exists():
-                chat_list_item.last_message_label.configure(text=text)
-                chat_list_item.timestamp_label.configure(text=iso_to_hm(timestamp))
-            self.user_chats[chat_with_id].data.last_message = text
-            self.user_chats[chat_with_id].data.timestamp = timestamp
+            self.user_chats[user_id].data.last_message = text
+            self.user_chats[user_id].data.timestamp = timestamp
+
+            if (self.left_bottom_frame.winfo_children()[0].winfo_children()[0].
+                    winfo_children()[0].winfo_children()[0] == chat_list_item.frame):  # Кастыль)
+                if chat_list_item.last_message_label and chat_list_item.last_message_label.winfo_exists():
+                    chat_list_item.last_message_label.configure(text=text)
+                    chat_list_item.timestamp_label.configure(text=iso_to_hm(timestamp))
+            else:
+                self.init_user_chats_list()
         else:
-            new_chat_list_data = ChatListItemData(user_id=chat_with_id, display_name=display_name, username=username,
+            new_chat_list_data = ChatListItemData(user_id=user_id, display_name=display_name, username=username,
                                                   timestamp=timestamp, last_message=text)
 
             chat_list_item = ChatListItem(frame=None, last_message_label=None, timestamp_label=None,
                                           data=new_chat_list_data)
-            self.user_chats[chat_with_id] = chat_list_item
+            self.user_chats[user_id] = chat_list_item
 
             if self.side_menu_state == CurrentSideMenuState.CHATS:
                 self.init_user_chats_list()
 
-        message = MessageData(user_id=user_id,
-                              display_name=app.settings.account_data.display_name
-                              if user_id == app.settings.account_data.user_id else display_name,
-                              timestamp=timestamp, message=text)
+        message = MessageData(message_id=message_id, display_name=app.settings.account_data.display_name
+                              if user_id != app.settings.account_data.user_id else display_name,
+                              timestamp=timestamp, message=text, status=status, status_label=None, timestamp_label=None)
 
-        self.messages_cache[chat_with_id].append(message)
+        self.messages_cache[user_id].add_new(message_id, message)
 
         if self.current_chat:
-            self.init_messages(chat_with_id, new_message=True)
+            self.init_messages({message_id: message}, user_id, new_message=True)
 
-    def init_messages(self, user_id: int, new_message: bool = False, clear_messages_frame: bool = False) -> None:
+    def init_messages(self, messages: dict, user_id: int, new_message: bool = False,
+                      clear_messages_frame: bool = False) -> None:
         def init_():
             if not new_message:
                 AppContext.loading_window.start_loading()
@@ -423,40 +436,50 @@ class ChatWindow(ctk.CTkFrame):
                 self.clear_frame(self.current_chat.messages_frame)
 
             messages_frames: dict[ctk.CTkFrame, MessageData] = {}
-            messages: list[MessageData] = self.messages_cache[user_id]
 
-            for message in reversed([messages[-1]] if new_message else messages):
+            for message_id, message in reversed(messages.items()):
                 color: str = "#444444" if message.display_name == app.settings.account_data.display_name else "#343434"
 
                 message_frame = ctk.CTkFrame(self.current_chat.messages_frame, fg_color=color, corner_radius=17,
                                              border_width=0, height=70, width=90)
 
-                if (self.current_chat.first_message_frame and self.current_chat.first_message_frame.winfo_exists()
-                        and not new_message):
-                    message_frame.pack(padx=10, pady=10, anchor=ctk.W, before=self.current_chat.first_message_frame)
+                if (self.current_chat.first_message_frame and self.current_chat.first_message_frame.winfo_exists() and
+                        not new_message):
+                    message_frame.pack(padx=10, pady=10, anchor=ctk.SW, before=self.current_chat.first_message_frame)
                     self.current_chat.first_message_frame = message_frame
                 else:
-                    message_frame.pack(padx=10, pady=10, anchor=ctk.W)
+                    message_frame.pack(padx=10, pady=10, anchor=ctk.SW)
+                    self.current_chat.last_message_frame = message_frame
 
                 messages_frames[message_frame] = message
 
             for frame, message in messages_frames.items():
-                def load_message(message_: MessageData) -> None:
+                def load_message(data: MessageData) -> None:
                     content_frame = ctk.CTkFrame(frame, fg_color="transparent", corner_radius=0, border_width=0)
                     content_frame.pack(fill=ctk.BOTH, expand=True, padx=10, pady=10)
 
-                    ctk.CTkLabel(content_frame, text=message_.display_name,
+                    ctk.CTkLabel(content_frame, text=data.display_name,
                                  font=("Arial", 14, "bold"), justify=ctk.LEFT,
                                  wraplength=300).pack(side=ctk.TOP, anchor=ctk.W, padx=(0, 30))
 
                     bottom_frame = ctk.CTkFrame(content_frame, fg_color="transparent", corner_radius=0, border_width=0)
                     bottom_frame.pack(side=ctk.BOTTOM, fill=ctk.X)
 
-                    ctk.CTkLabel(bottom_frame, text=message_.message, justify=ctk.LEFT,
+                    ctk.CTkLabel(bottom_frame, text=data.message, justify=ctk.LEFT,
                                  wraplength=300).pack(side=ctk.LEFT, anchor=ctk.W)
 
-                    ctk.CTkLabel(bottom_frame, text=iso_to_hm(message_.timestamp)).pack(side=ctk.RIGHT,
-                                                                                        padx=(10, 0), anchor=ctk.SE)
+                    right_frame = ctk.CTkFrame(bottom_frame, fg_color="transparent", corner_radius=0, border_width=0)
+                    right_frame.pack(side=ctk.RIGHT, padx=(10, 0), anchor=ctk.SE)
+
+                    timestamp_label = ctk.CTkLabel(right_frame, text=iso_to_hm(data.timestamp))
+                    timestamp_label.pack(side=ctk.LEFT, anchor=ctk.SW)
+                    self.messages_cache[user_id][data.message_id].timestamp_label = timestamp_label
+
+                    image = ctk.CTkImage(light_image=Image.open(f"app/assets/icons/{data.status.value}.png"),
+                                         size=(12, 12))
+                    status_label = ctk.CTkLabel(right_frame, text="", image=image)
+                    status_label.pack(side=ctk.RIGHT, padx=(10, 0))
+                    self.messages_cache[user_id][data.message_id].status_label = status_label
 
                     # noinspection PyProtectedMember
                     # noinspection PyTypeChecker
@@ -468,6 +491,24 @@ class ChatWindow(ctk.CTkFrame):
                 AppContext.loading_window.finish_loading()
 
         threading.Thread(target=init_, daemon=True).start()
+
+    def change_message_status(self, message_id: int, status: MessageStatus, timestamp: str | None = None,
+                              temp_id: str | None = None, user_id: int | None = None) -> None:
+        if status == MessageStatus.RECEIVED:
+            self.messages_cache[user_id][temp_id].status = status
+            self.messages_cache[user_id][temp_id].timestamp = timestamp
+
+            self.messages_cache[user_id].add_new(message_id, self.messages_cache[user_id][temp_id])
+            self.messages_cache[user_id].pop_by_id(temp_id)
+        elif status == MessageStatus.READ:
+            self.messages_cache[user_id][message_id].status = status
+
+        if self.messages_cache[user_id][message_id].status_label.winfo_exists():
+            image = ctk.CTkImage(light_image=Image.open(f"app/assets/icons/{status.value}.png"), size=(12, 12))
+            self.messages_cache[user_id][message_id].status_label.configure(image=image)
+
+            if status == MessageStatus.RECEIVED:
+                self.messages_cache[user_id][message_id].timestamp_label.configure(text=iso_to_hm(timestamp))
 
     @staticmethod
     def clear_frame(frame: ctk.CTkFrame | ctk.CTkScrollableFrame | None) -> None:

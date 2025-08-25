@@ -10,12 +10,21 @@ class AccountData:  # Data for displaying account info
     display_name: str
 
 
+class MessageStatus(Enum):
+    SENT = "sent"
+    RECEIVED = "received"
+    READ = "read"
+
+
 @dataclass
 class MessageData:  # Data for displaying a message in chat
-    user_id: int
+    timestamp_label: CTkLabel | None
+    status_label: CTkLabel | None
+    message_id: int
     display_name: str
     message: str
     timestamp: str
+    status: MessageStatus
 
 
 @dataclass
@@ -41,6 +50,7 @@ class CurrentChat:  # Right frames chat data
     username_label: CTkLabel | None
     chat_list_frame: CTkFrame | None
     messages_frame: CTkScrollableFrame | None
+    last_message_frame: CTkFrame | None
     first_message_frame: CTkFrame | None
     textbox: CTkTextbox | None
     user: AccountData

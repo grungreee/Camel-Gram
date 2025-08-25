@@ -4,6 +4,46 @@ import re
 import keyring
 import app.settings
 from datetime import datetime, timezone
+from collections import deque
+from typing import Any
+from app.schemas import MessageData
+
+
+class MessageList:
+    def __init__(self) -> None:
+        self._order = deque()
+        self._messages: dict[int | str, MessageData] = {}
+
+    def add_old(self, message_id, message) -> None:
+        if message_id not in self._messages:
+            self._order.appendleft(message_id)
+            self._messages[message_id] = message
+
+    def add_new(self, message_id, message) -> None:
+        if message_id not in self._messages:
+            self._order.append(message_id)
+            self._messages[message_id] = message
+
+    def get_by_id(self, message_id) -> Any:
+        return self._messages.get(message_id)
+
+    def get_by_index(self, index: int) -> Any:
+        msg_id = self._order[index]
+        return self._messages[msg_id]
+
+    def pop_by_id(self, message_id) -> None:
+        if message_id in self._messages:
+            self._order.remove(message_id)
+
+    def __getitem__(self, item) -> MessageData:
+        return self._messages[item]
+
+    def __setitem__(self, key, value) -> None:
+        self._messages[key] = value
+
+    @property
+    def dict(self) -> dict[int | str, MessageData]:
+        return self._messages
 
 
 def iso_to_hm(iso_str: str, to_local: bool = True) -> str:

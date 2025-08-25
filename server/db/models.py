@@ -1,5 +1,4 @@
 from sqlalchemy import Table, Column, Integer, String, MetaData, ForeignKey, Text, DateTime, Boolean, Index
-from datetime import datetime
 
 
 metadata_obj = MetaData(schema="camelgram_removeglad")
@@ -21,7 +20,7 @@ messages_table = Table(
     Column("sender_id", Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
     Column("receiver_id", Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
     Column("message", Text, nullable=False),
-    Column("timestamp", DateTime, default=datetime.now),
+    Column("timestamp", DateTime, nullable=False),
     Column("is_read", Boolean, default=False, nullable=False),
 )
 
