@@ -14,7 +14,7 @@ class WebSocketClient:
         self.ws = WebSocketApp(
             url=f"ws://{app.settings.url}/ws?token={get_validation_key()}",
             on_message=self.on_message,
-            on_close=self.on_close
+            on_error=lambda _, *args: print(*args)
         )
 
     @staticmethod
@@ -53,10 +53,7 @@ class WebSocketClient:
             self.ws.send(json.dumps(data_with_auth))
         except WebSocketConnectionClosedException:
             showerror("Error", "Connection is not established. Please try again later.")
+            AppContext.main_window.destroy()
 
     def close(self) -> None:
         self.ws.close()
-
-    @staticmethod
-    def on_close(*_) -> None:
-        AppContext.main_window.destroy()

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.security import OAuth2PasswordBearer
 from server.utils.jwt import verify_access_token
-from server.db.core import get_messages, get_chats
+from server.db.core import get_messages_from_id, get_chats
 from server.schemas import GetMessagesResponse, GetChatsResponse
 
 router = APIRouter()
@@ -9,12 +9,13 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 
 @router.get("/messages")
-async def messages(receiver_id: int, page: int, token: str = Depends(oauth2_scheme)) -> list[GetMessagesResponse]:
+async def messages(receiver_id: int, message_id: int | None = None,
+                   token: str = Depends(oauth2_scheme)) -> list[GetMessagesResponse]:
     payload: dict | None = verify_access_token(token)
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid token")
 
-    raw_messages: list = await get_messages(payload["user_id"], receiver_id, page)
+    raw_messages: list = await get_messages_from_id(payload["user_id"], receiver_id, message_id)
 
     return [GetMessagesResponse(message_id=m[0], message=m[1], timestamp=m[2], display_name=m[3],
                                 status="read" if m[4] else "received") for m in raw_messages]

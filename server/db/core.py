@@ -101,9 +101,10 @@ async def insert_message(sender_id: int, receiver_id: int, message: str) -> tupl
         return result.first()
 
 
-async def get_messages(sender_id: int, receiver_id: int, page: int) -> list[tuple[int, str, datetime, str]]:
+async def get_messages_from_id(sender_id: int, receiver_id: int,
+                               from_message_id: int | None = None) -> list[tuple[int, str, datetime, str]]:
     # noinspection PyTypeChecker
-    stmt = select(
+    base_query = select(
         messages_table.c.id,
         messages_table.c.message,
         messages_table.c.timestamp,
@@ -112,7 +113,10 @@ async def get_messages(sender_id: int, receiver_id: int, page: int) -> list[tupl
     ).join(users_table, users_table.c.id == messages_table.c.sender_id).where(
         ((messages_table.c.sender_id == sender_id) & (messages_table.c.receiver_id == receiver_id)) |
         ((messages_table.c.sender_id == receiver_id) & (messages_table.c.receiver_id == sender_id))
-    ).order_by(messages_table.c.id.desc()).limit(20).offset(page * 20)
+    )
+
+    stmt = base_query.where(messages_table.c.id < from_message_id) if from_message_id is not None else base_query
+    stmt = stmt.order_by(messages_table.c.id.desc()).limit(20)
 
     async with async_engine.begin() as conn:
         result = await conn.execute(stmt)

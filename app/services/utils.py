@@ -4,9 +4,8 @@ import re
 import keyring
 import app.settings
 from datetime import datetime, timezone
-from collections import deque
-from typing import Any
 from app.schemas import MessageData
+from collections import deque
 
 
 class MessageList:
@@ -14,24 +13,21 @@ class MessageList:
         self._order = deque()
         self._messages: dict[int | str, MessageData] = {}
 
-    def add_old(self, message_id, message) -> None:
+    def add_old(self, message_id: int | str, message: MessageData) -> None:
         if message_id not in self._messages:
             self._order.appendleft(message_id)
             self._messages[message_id] = message
 
-    def add_new(self, message_id, message) -> None:
+    def add_new(self, message_id: int | str, message: MessageData) -> None:
         if message_id not in self._messages:
             self._order.append(message_id)
             self._messages[message_id] = message
 
-    def get_by_id(self, message_id) -> Any:
-        return self._messages.get(message_id)
-
-    def get_by_index(self, index: int) -> Any:
+    def get_by_index(self, index: int) -> MessageData:
         msg_id = self._order[index]
         return self._messages[msg_id]
 
-    def pop_by_id(self, message_id) -> None:
+    def pop_by_id(self, message_id: int | str) -> None:
         if message_id in self._messages:
             self._order.remove(message_id)
 
@@ -41,9 +37,8 @@ class MessageList:
     def __setitem__(self, key, value) -> None:
         self._messages[key] = value
 
-    @property
-    def dict(self) -> dict[int | str, MessageData]:
-        return self._messages
+    def __call__(self) -> dict[int | str, MessageData]:
+        return {msg_id: self._messages[msg_id] for msg_id in self._order}
 
 
 def iso_to_hm(iso_str: str, to_local: bool = True) -> str:
@@ -82,6 +77,14 @@ def check_all(username: str, password: str, email: str | None = None) -> str | b
             return "Incorrect email"
 
     return True
+
+
+def format_last_message(text: str) -> str:
+    text = text.replace("\n", " ")
+
+    if len(text) > 20:
+        return text[:20] + "..."
+    return text
 
 
 def hash_password(password: str) -> str:
