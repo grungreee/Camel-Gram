@@ -13,6 +13,7 @@ class LoadingWindow(ctk.CTkToplevel):
         self.root: ctk.CTk = root
         self.active_loadings: int = 0
         self.animating: bool = False
+        self.loading: bool = False
 
         self.title("Loading...")
         self.geometry("300x150")
@@ -36,6 +37,7 @@ class LoadingWindow(ctk.CTkToplevel):
 
     def start_loading(self) -> None:
         self.active_loadings += 1
+        self.loading = True
 
         if not self.animating:
             self.start_loading_animation()
@@ -67,6 +69,7 @@ class LoadingWindow(ctk.CTkToplevel):
             time.sleep(0.35)
 
             if self.active_loadings == 0 and self.winfo_exists():
+                self.loading = False
                 self.grab_release()
                 self.withdraw()
 

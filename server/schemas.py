@@ -28,12 +28,17 @@ class DisplayNameChangeRequest(BaseModel):
     display_name: str
 
 
-class GetMessagesResponse(BaseModel):
+class MessagesResponse(BaseModel):
     message_id: int
     message: str
     timestamp: datetime
     display_name: str
     status: str
+
+
+class GetMessagesResponse(BaseModel):
+    messages: list[MessagesResponse]
+    has_more: bool
 
 
 class UserResponse(BaseModel):

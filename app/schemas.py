@@ -74,6 +74,5 @@ class CurrentChat:  # Right frames chat data
     username_label: CTkLabel | None = None
     chat_list_frame: CTkFrame | None = None
     messages_frame: CTkScrollableFrame | None = None
-    last_message_frame: CTkFrame | None = None
     first_message_frame: CTkFrame | None = None
     textbox: CTkTextbox | None = None

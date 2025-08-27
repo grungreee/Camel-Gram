@@ -102,7 +102,7 @@ async def insert_message(sender_id: int, receiver_id: int, message: str) -> tupl
 
 
 async def get_messages_from_id(sender_id: int, receiver_id: int,
-                               from_message_id: int | None = None) -> list[tuple[int, str, datetime, str]]:
+                               from_message_id: int | None = None) -> tuple[list[tuple[int, str, datetime, str]], bool]:
     # noinspection PyTypeChecker
     base_query = select(
         messages_table.c.id,
@@ -116,12 +116,16 @@ async def get_messages_from_id(sender_id: int, receiver_id: int,
     )
 
     stmt = base_query.where(messages_table.c.id < from_message_id) if from_message_id is not None else base_query
-    stmt = stmt.order_by(messages_table.c.id.desc()).limit(20)
+    stmt = stmt.order_by(messages_table.c.id.desc()).limit(21)
 
     async with async_engine.begin() as conn:
         result = await conn.execute(stmt)
+        rows = result.all()
 
-    return result.all()
+    has_more: bool = len(rows) > 20
+    messages: list[tuple[int, str, datetime, str]] = rows[:20]
+
+    return messages, has_more
 
 
 async def get_chats(user_id: int) -> list[tuple[int, str, str]]:

@@ -46,13 +46,16 @@ def handle_change_display_name(display_name_label: ctk.CTkLabel) -> None:
     threading.Thread(target=change_display_name, daemon=True).start()
 
 
-def handle_get_messages() -> None:
+def handle_get_messages(clear_messages_frame: bool = True) -> None:
     def get_messages() -> None:
         receiver_id: int = AppContext.main_window.chat_window.current_chat.user.user_id
 
         message_id: int | None = None
 
         if receiver_id in AppContext.main_window.chat_window.messages_cache:
+            if not AppContext.main_window.chat_window.messages_cache[receiver_id].has_more:
+                return
+
             message_id = (AppContext.main_window.chat_window.messages_cache[receiver_id].
                           messages.get_by_index(0).message_id)
 
@@ -63,10 +66,10 @@ def handle_get_messages() -> None:
 
         response_status, response = make_request("get", "messages", data=data, with_token=True)
 
-        if response_status == 200:
-            messages: dict[int, MessageData] = {}
+        messages = MessageList()
 
-            for body in response:
+        if response_status == 200:
+            for body in response["messages"]:
                 message: MessageData = MessageData(
                     message_id=body["message_id"],
                     display_name=body["display_name"],
@@ -75,19 +78,21 @@ def handle_get_messages() -> None:
                     status=MessageStatus(body["status"])
                 )
 
-                messages[body["message_id"]] = message
+                messages.add_old(body["message_id"], message)
 
                 if receiver_id not in AppContext.main_window.chat_window.messages_cache:
                     message_list = MessageList()
                     message_list.add_old(body["message_id"], message)
                     AppContext.main_window.chat_window.messages_cache[receiver_id] = (
-                        MessagesCache(messages=message_list, has_more=False))
+                        MessagesCache(messages=message_list, has_more=response["has_more"]))
                 else:
                     AppContext.main_window.chat_window.messages_cache[receiver_id].messages.add_old(body["message_id"],
                                                                                                     message)
-            (AppContext.main_window.
-             chat_window.init_messages(AppContext.main_window.chat_window.messages_cache[receiver_id].messages(),
-                                       receiver_id, clear_messages_frame=True))
+                    AppContext.main_window.chat_window.messages_cache[receiver_id].has_more = response["has_more"]
+            if receiver_id in AppContext.main_window.chat_window.messages_cache:
+                (AppContext.main_window.
+                 chat_window.init_messages(messages(), receiver_id, clear_messages_frame=clear_messages_frame,
+                                           scroll_down=True if not message_id else False))
 
     threading.Thread(target=get_messages, daemon=True).start()
 
