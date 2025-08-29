@@ -24,14 +24,18 @@ class MessageList:
             self._messages[message_id] = message
 
     def get_by_index(self, index: int) -> MessageData:
-        msg_id = self._order[index]
-        return self._messages[msg_id]
+        return self._messages[self._order[index]]
 
     def pop_by_id(self, message_id: int | str) -> None:
         if message_id in self._messages:
             self._order.remove(message_id)
 
-    def __getitem__(self, item) -> MessageData:
+    def __len__(self) -> int:
+        return len(self._messages)
+
+    def __getitem__(self, item: str | int | slice) -> MessageData | dict[int | str, MessageData]:
+        if isinstance(item, slice):
+            return {message_id: self._messages[message_id] for message_id in list(self._order)[item]}
         return self._messages[item]
 
     def __setitem__(self, key, value) -> None:

@@ -37,6 +37,7 @@ class AccountData:  # Data for displaying account info
 class MessagesCache:
     messages: "MessageList"
     has_more: bool
+    loaded: int = 0
 
 
 @dataclass

@@ -102,7 +102,8 @@ async def insert_message(sender_id: int, receiver_id: int, message: str) -> tupl
 
 
 async def get_messages_from_id(sender_id: int, receiver_id: int,
-                               from_message_id: int | None = None) -> tuple[list[tuple[int, str, datetime, str]], bool]:
+                               from_message_id: int | None = None) -> tuple[list[tuple[int, str, datetime, str, bool]],
+                                                                            bool]:
     # noinspection PyTypeChecker
     base_query = select(
         messages_table.c.id,
@@ -123,7 +124,7 @@ async def get_messages_from_id(sender_id: int, receiver_id: int,
         rows = result.all()
 
     has_more: bool = len(rows) > 20
-    messages: list[tuple[int, str, datetime, str]] = rows[:20]
+    messages: list[tuple[int, str, datetime, str, bool]] = rows[:20]
 
     return messages, has_more
 

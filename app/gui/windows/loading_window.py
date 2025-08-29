@@ -43,7 +43,6 @@ class LoadingWindow(ctk.CTkToplevel):
             self.start_loading_animation()
 
     def animate_loading(self) -> None:
-        time.sleep(0.05)
         self.animating = True
 
         while self.winfo_exists() and self.winfo_viewable():

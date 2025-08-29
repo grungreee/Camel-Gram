@@ -90,6 +90,7 @@ def handle_get_messages(clear_messages_frame: bool = True) -> None:
                                                                                                     message)
                     AppContext.main_window.chat_window.messages_cache[receiver_id].has_more = response["has_more"]
             if receiver_id in AppContext.main_window.chat_window.messages_cache:
+                AppContext.main_window.chat_window.messages_cache[receiver_id].loaded += len(messages)
                 (AppContext.main_window.
                  chat_window.init_messages(messages(), receiver_id, clear_messages_frame=clear_messages_frame,
                                            scroll_down=True if not message_id else False))

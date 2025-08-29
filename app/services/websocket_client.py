@@ -2,7 +2,7 @@ import threading
 import app.settings
 import json
 from app.gui.context import AppContext
-from app.schemas import MessageStatus
+from app.schemas import MessageStatus, AccountData
 from app.services.utils import get_validation_key
 from tkinter.messagebox import showerror
 from websocket import WebSocketApp, WebSocketConnectionClosedException
@@ -25,8 +25,10 @@ class WebSocketClient:
             case "new_message":
                 (AppContext.main_window.
                  chat_window.handle_new_message(text=body["message"], message_id=body["message_id"],
-                                                user_id=body["sender_id"], timestamp=body["timestamp"],
-                                                display_name=body["display_name"], username=body["username"],
+                                                user=AccountData(user_id=body["sender_id"],
+                                                                 display_name=body["display_name"],
+                                                                 username=body["username"]),
+                                                timestamp=body["timestamp"],
                                                 status=MessageStatus(body["status"])))
             case "message_ack":
                 (AppContext.main_window.

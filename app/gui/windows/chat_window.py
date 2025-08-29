@@ -292,18 +292,25 @@ class ChatWindow(ctk.CTkFrame):
         self.init_chat()
 
     def bind_scroll(self, widget) -> None:
-        widget.bind("<MouseWheel>", self.on_scroll_event)
+        widget.bind("<MouseWheel>", lambda event: self.on_scroll_event() if event.delta > 0 else None)
 
         for child in widget.winfo_children():
             if child.winfo_children():
                 self.bind_scroll(child)
 
-            child.bind("<MouseWheel>", self.on_scroll_event)
+            child.bind("<MouseWheel>", lambda event: self.on_scroll_event() if event.delta > 0 else None)
 
-    def on_scroll_event(self, _=None) -> None:
+    def on_scroll_event(self) -> None:
         if (self.current_chat.messages_frame._parent_canvas.yview()[0] <= 0.1 and
                 not AppContext.loading_window.loading):
-            handle_get_messages(False)
+            cache: MessagesCache = self.messages_cache[self.current_chat.user.user_id]
+
+            if cache.loaded < len(cache.messages):
+                self.messages_cache[self.current_chat.user.user_id] += 20
+                self.init_messages(cache.messages[-cache.loaded - 20:len(cache.messages) - cache.loaded],
+                                   self.current_chat.user.user_id, clear_messages_frame=False)
+            elif cache.loaded == len(cache.messages) and cache.has_more:
+                handle_get_messages(False)
 
     def init_chat(self, is_close: bool = False) -> None:
         def send_message() -> None:
@@ -312,10 +319,11 @@ class ChatWindow(ctk.CTkFrame):
             if text.strip():
                 temp_id = str(uuid.uuid4())
 
-                self.handle_new_message(text=text, message_id=temp_id, user_id=self.current_chat.user.user_id,
-                                        timestamp=datetime.now().isoformat(),
-                                        display_name=app.settings.account_data.display_name,
-                                        username=app.settings.account_data.username, status=MessageStatus.SENT)
+                self.handle_new_message(text=text, message_id=temp_id,
+                                        user=AccountData(user_id=self.current_chat.user.user_id,
+                                                         display_name=app.settings.account_data.display_name,
+                                                         username=app.settings.account_data.username),
+                                        timestamp=datetime.now().isoformat(), status=MessageStatus.SENT)
 
                 self.current_chat.textbox.delete(1.0, ctk.END)
 
@@ -365,6 +373,9 @@ class ChatWindow(ctk.CTkFrame):
                 self.clear_frame(self.right_upper_frame)
                 self.clear_frame(self.right_bottom_frame)
 
+                if self.current_chat.user.user_id in self.messages_cache:
+                    self.messages_cache[self.current_chat.user.user_id].loaded = 0
+
                 display_name_label = ctk.CTkLabel(self.right_upper_frame, text=self.current_chat.user.display_name,
                                                   font=("Arial", 14, "bold"))
                 display_name_label.pack(padx=15, anchor=ctk.W, side=ctk.TOP)
@@ -381,9 +392,12 @@ class ChatWindow(ctk.CTkFrame):
                                                         scrollbar_button_hover_color="#545454")
                 messages_frame.pack(fill=ctk.BOTH, expand=True)
 
-                messages_frame._scrollbar.bind("<Button-1>", self.on_scroll_event)
-                messages_frame._scrollbar.bind("<B1-Motion>", self.on_scroll_event)
-                messages_frame._scrollbar.bind("<ButtonRelease-1>", self.on_scroll_event)
+                messages_frame._scrollbar.bind(
+                    "<Button-1>", lambda event: self.on_scroll_event() if event.delta > 0 else None)
+                messages_frame._scrollbar.bind(
+                    "<B1-Motion>", lambda event: self.on_scroll_event() if event.delta > 0 else None)
+                messages_frame._scrollbar.bind(
+                    "<ButtonRelease-1>", lambda event: self.on_scroll_event() if event.delta > 0 else None)
                 messages_frame._scrollbar.configure(width=13)
 
                 self.bind_scroll(messages_frame)
@@ -414,16 +428,17 @@ class ChatWindow(ctk.CTkFrame):
             if self.current_chat.user.user_id not in self.messages_cache:
                 handle_get_messages()
             else:
-                self.init_messages(self.messages_cache[self.current_chat.user.user_id].messages(),
+                self.messages_cache[self.current_chat.user.user_id].loaded = 20
+                self.init_messages(self.messages_cache[self.current_chat.user.user_id].messages[-20:],
                                    self.current_chat.user.user_id, scroll_down=True)
 
-    def handle_new_message(self, text: str, message_id: str | int, user_id: int, timestamp: str, display_name: str,
-                           username: str, status: MessageStatus) -> None:
-        if user_id in self.user_chats:
-            chat_list_item = self.user_chats[user_id]
+    def handle_new_message(self, text: str, message_id: str | int, user: AccountData, timestamp: str,
+                           status: MessageStatus) -> None:
+        if user.user_id in self.user_chats:
+            chat_list_item = self.user_chats[user.user_id]
 
-            self.user_chats[user_id].data.last_message = text
-            self.user_chats[user_id].data.timestamp = timestamp
+            self.user_chats[user.user_id].data.last_message = text
+            self.user_chats[user.user_id].data.timestamp = timestamp
 
             if self.side_menu_state == CurrentSideMenuState.CHATS:
                 if self.chat_list_frame.winfo_children()[0] == chat_list_item.frame:
@@ -433,31 +448,32 @@ class ChatWindow(ctk.CTkFrame):
                 else:
                     self.init_user_chats_list()
         else:
-            new_chat_list_data = ChatListItemData(user_id=user_id, display_name=display_name, username=username,
-                                                  timestamp=timestamp, last_message=text)
+            new_chat_list_data = ChatListItemData(user_id=user.user_id, display_name=user.display_name,
+                                                  username=user.username, timestamp=timestamp, last_message=text)
 
             chat_list_item = ChatListItem(data=new_chat_list_data)
-            self.user_chats[user_id] = chat_list_item
+            self.user_chats[user.user_id] = chat_list_item
 
             if self.side_menu_state == CurrentSideMenuState.CHATS:
                 self.init_user_chats_list()
 
-        message = MessageData(message_id=message_id, display_name=display_name, timestamp=timestamp,
+        message = MessageData(message_id=message_id, display_name=user.display_name, timestamp=timestamp,
                               message=text, status=status)
 
-        if user_id not in self.messages_cache:
+        if user.user_id not in self.messages_cache:
             message_list = MessageList()
             message_list.add_new(message_id, message)
-            self.messages_cache[user_id] = MessagesCache(messages=message_list, has_more=True)
+            self.messages_cache[user.user_id] = MessagesCache(messages=message_list, has_more=True)
         else:
-            self.messages_cache[user_id].messages.add_new(message_id, message)
+            self.messages_cache[user.user_id].messages.add_new(message_id, message)
 
         if self.current_chat:
-            self.init_messages({message_id: message}, user_id, new_message=True)
+            self.messages_cache[user.user_id].loaded += 1
+            self.init_messages({message_id: message}, user.user_id, new_message=True)
 
     def init_messages(self, messages: dict, user_id: int, new_message: bool = False,
                       clear_messages_frame: bool = False, scroll_down: bool = False) -> None:
-        if not new_message:
+        if not new_message and len(messages) > 10:
             AppContext.loading_window.start_loading()
 
         if clear_messages_frame:
@@ -470,6 +486,7 @@ class ChatWindow(ctk.CTkFrame):
 
             message_frame = ctk.CTkFrame(self.current_chat.messages_frame, fg_color=color, corner_radius=17,
                                          border_width=0, height=70, width=90)
+            message_frame.pack_propagate(False)
 
             if (self.current_chat.first_message_frame and self.current_chat.first_message_frame.winfo_exists() and
                     not new_message):
@@ -509,6 +526,8 @@ class ChatWindow(ctk.CTkFrame):
                 status_label.pack(side=ctk.RIGHT, padx=(10, 0))
                 self.messages_cache[user_id].messages[data.message_id].status_label = status_label
 
+                frame.pack_propagate(True)
+
                 # noinspection PyTypeChecker
                 self.after(50, lambda f=frame: self.bind_scroll(f))
 
@@ -519,7 +538,7 @@ class ChatWindow(ctk.CTkFrame):
 
             threading.Thread(target=load_message, args=(f, m)).start()
 
-        if not new_message:
+        if not new_message and len(messages) > 10:
             AppContext.loading_window.finish_loading()
 
     def change_message_status(self, message_id: int, status: MessageStatus, timestamp: str | None = None,
