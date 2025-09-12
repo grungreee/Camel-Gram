@@ -30,6 +30,7 @@ class DisplayNameChangeRequest(BaseModel):
 
 class MessagesResponse(BaseModel):
     message_id: int
+    user_id: int
     message: str
     timestamp: datetime
     display_name: str

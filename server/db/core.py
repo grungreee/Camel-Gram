@@ -6,9 +6,6 @@ from datetime import datetime
 
 
 def create_tables() -> None:
-    messages_table.drop(sync_engine, checkfirst=True)
-    chats_table.drop(sync_engine, checkfirst=True)
-
     metadata_obj.create_all(sync_engine)
 
 
@@ -101,30 +98,30 @@ async def insert_message(sender_id: int, receiver_id: int, message: str) -> tupl
         return result.first()
 
 
-async def get_messages_from_id(sender_id: int, receiver_id: int,
-                               from_message_id: int | None = None) -> tuple[list[tuple[int, str, datetime, str, bool]],
-                                                                            bool]:
+async def get_messages_from_id(sender_id: int, receiver_id: int, from_message_id: int | None = None
+                               ) -> tuple[list[tuple[int, str, datetime, str, bool, int]], bool]:
     # noinspection PyTypeChecker
     base_query = select(
         messages_table.c.id,
         messages_table.c.message,
         messages_table.c.timestamp,
         users_table.c.display_name,
-        messages_table.c.is_read
+        messages_table.c.is_read,
+        messages_table.c.sender_id
     ).join(users_table, users_table.c.id == messages_table.c.sender_id).where(
         ((messages_table.c.sender_id == sender_id) & (messages_table.c.receiver_id == receiver_id)) |
         ((messages_table.c.sender_id == receiver_id) & (messages_table.c.receiver_id == sender_id))
     )
 
     stmt = base_query.where(messages_table.c.id < from_message_id) if from_message_id is not None else base_query
-    stmt = stmt.order_by(messages_table.c.id.desc()).limit(21)
+    stmt = stmt.order_by(messages_table.c.id.desc()).limit(11)
 
     async with async_engine.begin() as conn:
         result = await conn.execute(stmt)
         rows = result.all()
 
-    has_more: bool = len(rows) > 20
-    messages: list[tuple[int, str, datetime, str, bool]] = rows[:20]
+    has_more: bool = len(rows) > 10
+    messages: list[tuple[int, str, datetime, str, bool, int]] = rows[:10]
 
     return messages, has_more
 
@@ -173,3 +170,14 @@ async def get_chats(user_id: int) -> list[tuple[int, str, str]]:
         result = await conn.execute(stmt)
 
     return result.all()
+
+
+async def mark_messages_as_read_upto(message_id: int, sender_id: int, receiver_id: int) -> None:
+    stmt = messages_table.update().where(
+        (messages_table.c.id <= message_id) &
+        (messages_table.c.sender_id == sender_id) &
+        (messages_table.c.receiver_id == receiver_id)
+    ).values(is_read=True)
+
+    async with async_engine.begin() as conn:
+        await conn.execute(stmt)

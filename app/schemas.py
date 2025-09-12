@@ -43,6 +43,7 @@ class MessagesCache:
 @dataclass
 class MessageData:  # Data for displaying a message in chat
     message_id: int
+    user_id: int
     display_name: str
     message: str
     timestamp: str

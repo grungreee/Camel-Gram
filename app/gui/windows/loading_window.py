@@ -6,7 +6,7 @@ from app.gui.context import AppContext
 
 class LoadingWindow(ctk.CTkToplevel):
     def __init__(self, root: ctk.CTk) -> None:
-        super().__init__()
+        super().__init__(root)
 
         self.withdraw()
         

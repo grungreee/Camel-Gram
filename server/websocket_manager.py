@@ -1,7 +1,7 @@
 import json
 from fastapi import WebSocket, WebSocketDisconnect
 from server.utils.jwt import verify_access_token
-from server.db.core import insert_message
+from server.db.core import insert_message, mark_messages_as_read_upto
 
 websocket_clients: dict[int, WebSocket] = {}
 
@@ -65,8 +65,19 @@ async def websocket_endpoint(websocket: WebSocket):
                     if receiver_id in websocket_clients:
                         await websocket_clients[receiver_id].send_json(new_message_data)
 
-                elif data["type"] == "read_message":
-                    pass
+                elif data["type"] == "read_messages":
+                    message_id: int = data["message_id"]
+                    receiver_id = data["receiver_id"]
+
+                    await mark_messages_as_read_upto(message_id, sender_id=user_id, receiver_id=receiver_id)
+
+                    read_message_data: dict = {
+                        "type": "messages_read",
+                        "message_id": message_id
+                    }
+
+                    if receiver_id in websocket_clients:
+                        await websocket_clients[receiver_id].send_json(read_message_data)
 
             except (json.JSONDecodeError, KeyError):
                 await websocket.send_json({"type": "error", "msg": "Invalid json data"})

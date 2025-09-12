@@ -18,7 +18,8 @@ async def messages(receiver_id: int, message_id: int | None = None,
     raw_messages, has_more = await get_messages_from_id(payload["user_id"], receiver_id, message_id)
 
     return GetMessagesResponse(messages=[MessagesResponse(message_id=m[0], message=m[1], timestamp=m[2],
-                                                          display_name=m[3], status="read" if m[4] else "received")
+                                                          display_name=m[3], status="read" if m[4] else "received",
+                                                          user_id=m[5])
                                          for m in raw_messages], has_more=has_more)
 
 
