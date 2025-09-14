@@ -38,12 +38,13 @@ class MessagesCache:
     messages: "MessageList"
     has_more: bool
     loaded: int = 0
+    last_read_message_id: int = 0
 
 
 @dataclass
 class MessageData:  # Data for displaying a message in chat
     message_id: int
-    user_id: int
+    sender_id: int
     display_name: str
     message: str
     timestamp: str

@@ -76,7 +76,7 @@ def handle_get_messages(clear_messages_frame: bool = True) -> None:
                     timestamp=body["timestamp"],
                     message=body["message"],
                     status=MessageStatus(body["status"]),
-                    user_id=body["user_id"]
+                    sender_id=body["sender_id"]
                 )
 
                 messages.add_old(body["message_id"], message)
