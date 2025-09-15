@@ -9,7 +9,7 @@ from datetime import datetime, UTC
 from app.gui.context import AppContext
 from app.services.auth_controller import handle_logout
 from app.services.handle_requests import handle_search, handle_change_display_name, handle_get_messages
-from app.services.utils import iso_to_hm, MessageList, format_last_message
+from app.services.utils import iso_to_hm, MessageList, format_last_message, resource_path
 from app.schemas import (AccountData, ChatListItemData, ChatListItem, MessageData, CurrentChat, CurrentSideMenuState,
                          MessageStatus, MessagesCache)
 
@@ -73,7 +73,7 @@ class ChatWindow(ctk.CTkFrame):
         self.clear_frame(self.left_upper_frame)
         self.clear_frame(self.left_bottom_frame)
 
-        back_arrow_image = ctk.CTkImage(light_image=Image.open("app/assets/icons/arrow_left.png"),
+        back_arrow_image = ctk.CTkImage(light_image=Image.open(resource_path("app/assets/icons/arrow_left.png")),
                                         size=(18, 13))
         back_button = self.parent.styled_button(self.left_upper_frame, text="", height=30, width=40,
                                                 corner_radius=5, image=back_arrow_image,
@@ -86,7 +86,7 @@ class ChatWindow(ctk.CTkFrame):
         account_info_frame = ctk.CTkFrame(self.left_bottom_frame, height=125)
         account_info_frame.pack(pady=(5, 0), padx=10, fill=ctk.X)
 
-        pencil_icon = ctk.CTkImage(light_image=Image.open("app/assets/icons/pencil.png"), size=(17, 17))
+        pencil_icon = ctk.CTkImage(light_image=Image.open(resource_path("app/assets/icons/pencil.png")), size=(17, 17))
 
         display_name_frame = ctk.CTkFrame(account_info_frame, fg_color="transparent", height=24)
         display_name_frame.pack(pady=(10, 0), padx=10, anchor=ctk.W, fill=ctk.X)
@@ -118,7 +118,9 @@ class ChatWindow(ctk.CTkFrame):
         self.clear_frame(self.left_upper_frame)
         self.clear_frame(self.left_bottom_frame)
 
-        burger_menu_image = ctk.CTkImage(light_image=Image.open("app/assets/icons/burger_menu.png"), size=(18, 13))
+        burger_menu_image = ctk.CTkImage(
+            light_image=Image.open(resource_path("app/assets/icons/burger_menu.png")),
+            size=(18, 13))
         open_side_menu_button = self.parent.styled_button(self.left_upper_frame, text="", image=burger_menu_image,
                                                           width=40, height=30, corner_radius=5,
                                                           command=self.init_side_menu)
@@ -151,7 +153,7 @@ class ChatWindow(ctk.CTkFrame):
         self.clear_frame(self.left_upper_frame)
         self.clear_frame(self.left_bottom_frame)
 
-        back_arrow_image = ctk.CTkImage(light_image=Image.open("app/assets/icons/arrow_left.png"),
+        back_arrow_image = ctk.CTkImage(light_image=Image.open(resource_path("app/assets/icons/arrow_left.png")),
                                         size=(18, 13))
         back_button = self.parent.styled_button(self.left_upper_frame, text="", height=30, width=40,
                                                 corner_radius=5, image=back_arrow_image, command=back)
@@ -414,7 +416,9 @@ class ChatWindow(ctk.CTkFrame):
 
                 self.current_chat.textbox = textbox
 
-                send_image = ctk.CTkImage(light_image=Image.open("app/assets/icons/send.png"), size=(24, 24))
+                send_image = ctk.CTkImage(
+                    light_image=Image.open(resource_path("app/assets/icons/send.png")),
+                    size=(24, 24))
                 send_button = ctk.CTkButton(entry_frame, text="", image=send_image, width=24, height=24,
                                             fg_color="transparent", hover_color="#444444",
                                             command=send_message)
@@ -524,8 +528,9 @@ class ChatWindow(ctk.CTkFrame):
                 last_read_message_id: int = self.messages_cache[user_id].last_read_message_id
 
                 if data.sender_id == app.settings.account_data.user_id:
-                    image = ctk.CTkImage(light_image=Image.open(f"app/assets/icons/{data.status.value}.png"),
-                                         size=(12, 12))
+                    image = ctk.CTkImage(
+                        light_image=Image.open(resource_path(f"app/assets/icons/{data.status.value}.png")),
+                        size=(12, 12))
                     status_label = ctk.CTkLabel(right_frame, text="", image=image)
                     status_label.pack(side=ctk.RIGHT, padx=(10, 0))
                     self.messages_cache[user_id].messages[data.message_id].status_label = status_label
@@ -583,7 +588,9 @@ class ChatWindow(ctk.CTkFrame):
             self.messages_cache[user_id].messages[message_id].status = status
 
         if self.messages_cache[user_id].messages[message_id].status_label.winfo_exists():
-            image = ctk.CTkImage(light_image=Image.open(f"app/assets/icons/{status.value}.png"), size=(12, 12))
+            image = ctk.CTkImage(
+                light_image=Image.open(resource_path(f"app/assets/icons/{status.value}.png")),
+                size=(12, 12))
             self.messages_cache[user_id].messages[message_id].status_label.configure(image=image)
 
             if status == MessageStatus.RECEIVED:

@@ -11,9 +11,6 @@ class Settings(BaseSettings):
     EMAIL_PASS: str
     JWT_KEY: str
     REDIS_URL: str | None = None
-    API_URL: str = "http://localhost:8000"
-    LOCAL: bool = False
-    TEST: bool = False
 
     @property
     def database_url_asyncpg(self) -> str:
@@ -26,4 +23,4 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file="server/.env", env_file_encoding="utf-8")
 
 
-settings = Settings()
+settings = Settings()  # type: ignore

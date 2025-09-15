@@ -3,6 +3,7 @@ from PIL import Image
 from typing import TYPE_CHECKING
 from app.services.auth_controller import handle_verify
 from app.schemas import WindowState
+from app.services.utils import resource_path
 
 if TYPE_CHECKING:
     from app.gui.main_root import MainRoot  # noqa: F401
@@ -35,7 +36,8 @@ class VerifyWindow(ctk.CTkFrame):
 
         self.parent.title(f"{self.parent.title_text} - Verify code")
 
-        back_arrow_image = ctk.CTkImage(light_image=Image.open("app/assets/icons/arrow_left.png"), size=(18, 13))
+        back_arrow_image = ctk.CTkImage(light_image=Image.open(resource_path("app/assets/icons/arrow_left.png")),
+                                        size=(18, 13))
         back_button = self.parent.styled_button(self, text="", width=50, image=back_arrow_image, command=lambda:
                                                 self.parent.navigation.navigate_to(WindowState.AUTH_REGISTER))
         back_button.pack(pady=10, padx=10, anchor=ctk.W)

@@ -2,7 +2,7 @@ from app.schemas import AccountData
 import uuid
 
 TEST: bool = False
-LOCAL: bool = True
+LOCAL: bool = False
 
 HOST: str = "localhost:8000" if LOCAL else "camel-gram.onrender.com"
 

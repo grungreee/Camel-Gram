@@ -2,6 +2,8 @@ import hashlib
 import string
 import re
 import keyring
+import os
+import sys
 import app.settings
 from datetime import datetime, timezone
 from app.schemas import MessageData
@@ -105,3 +107,7 @@ def set_validation_key(key: str) -> None:
 
 def delete_validation_key() -> None:
     keyring.delete_password(f"CamelGram{app.settings.session}", "access_key")
+
+
+def resource_path(relative_path: str) -> str:
+    return os.path.join(sys._MEIPASS if hasattr(sys, "_MEIPASS") else os.path.abspath("."), relative_path)

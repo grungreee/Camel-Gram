@@ -1,6 +1,4 @@
-import threading
 import customtkinter as ctk
-import time
 from app.gui.context import AppContext
 
 
@@ -9,7 +7,7 @@ class LoadingWindow(ctk.CTkToplevel):
         super().__init__(root)
 
         self.withdraw()
-        
+
         self.root: ctk.CTk = root
         self.active_loadings: int = 0
         self.animating: bool = False
@@ -42,37 +40,38 @@ class LoadingWindow(ctk.CTkToplevel):
         if not self.animating:
             self.start_loading_animation()
 
-    def animate_loading(self) -> None:
+    def _animate_tick(self) -> None:
+        if not (self.winfo_exists() and self.winfo_viewable() and self.loading):
+            self.animating = False
+            return
+
+        label_text = self.loading_label.cget("text")
+        if label_text == "Loading...":
+            self.loading_label.configure(text="Loading")
+        else:
+            self.loading_label.configure(text=label_text + ".")
+
         self.animating = True
-
-        while self.winfo_exists() and self.winfo_viewable():
-            label_text = self.loading_label.cget("text")
-            if label_text == "Loading...":
-                self.loading_label.configure(text="Loading")
-            else:
-                self.loading_label.configure(text=label_text + ".")
-
-            time.sleep(0.35)
-
-        self.animating = False
+        self.after(350, self._animate_tick)
 
     def start_loading_animation(self) -> None:
         self.loading_label.configure(text="Loading")
         self.deiconify()
         self.grab_set()
-        threading.Thread(target=self.animate_loading, daemon=True).start()
+        self.animating = True
+        self.after(350, self._animate_tick)
 
     def finish_loading(self) -> None:
-        def finish() -> None:
+        if self.active_loadings > 0:
             self.active_loadings -= 1
-            time.sleep(0.35)
 
+        def _finalize() -> None:
             if self.active_loadings == 0 and self.winfo_exists():
                 self.loading = False
                 self.grab_release()
                 self.withdraw()
 
-        threading.Thread(target=finish, daemon=True).start()
+        self.after(350, _finalize)
 
 
 def init_loading_window() -> None:

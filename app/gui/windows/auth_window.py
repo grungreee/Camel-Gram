@@ -3,7 +3,7 @@ from PIL import Image
 from typing import Literal, TYPE_CHECKING
 from app.schemas import WindowState
 from app.services.auth_controller import handle_auth
-from app.services.utils import check_all
+from app.services.utils import check_all, resource_path
 
 if TYPE_CHECKING:
     from app.gui.main_root import MainRoot  # noqa: F401
@@ -76,8 +76,11 @@ class AuthWindow(ctk.CTkFrame):
         if self.password_text:
             password_entry.insert(0, self.password_text)
 
-        open_eye_image = ctk.CTkImage(light_image=Image.open("app/assets/icons/eye_open.png"), size=(21, 21))
-        close_eye_image = ctk.CTkImage(light_image=Image.open("app/assets/icons/eye_close.png"), size=(21, 21))
+        open_eye_image = ctk.CTkImage(
+            light_image=Image.open(resource_path("app/assets/icons/eye_open.png")), size=(21, 21))
+        close_eye_image = ctk.CTkImage(
+            light_image=Image.open(resource_path("app/assets/icons/eye_close.png")),
+            size=(21, 21))
         show_password_button = self.parent.styled_button(password_frame, text="", image=close_eye_image, width=12,
                                                          command=change_password_visibility)
         show_password_button.pack(side=ctk.RIGHT, padx=(10, 0))
