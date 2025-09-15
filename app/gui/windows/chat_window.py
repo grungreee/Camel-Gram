@@ -557,7 +557,7 @@ class ChatWindow(ctk.CTkFrame):
                 frame.pack_propagate(True)
 
                 # noinspection PyTypeChecker
-                self.after(0, lambda f=frame: self.bind_scroll(f))
+                self.after(50, lambda f=frame: self.bind_scroll(f))
 
             thread = threading.Thread(target=load_message, args=(f, m))
             thread.start()
@@ -568,7 +568,8 @@ class ChatWindow(ctk.CTkFrame):
                 thread.join()
 
             if 0.8 < self.current_chat.messages_frame._parent_canvas.yview()[1] or scroll_down:
-                self.current_chat.messages_frame._parent_canvas.yview_moveto(1.0)
+                # noinspection PyTypeChecker
+                self.after(100, lambda: self.current_chat.messages_frame._parent_canvas.yview_moveto(1.0))
 
             if not new_message and len(messages) >= 10:
                 AppContext.loading_window.finish_loading()

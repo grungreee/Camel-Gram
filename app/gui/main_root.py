@@ -12,6 +12,8 @@ class MainRoot(ctk.CTk):
     def __init__(self):
         super().__init__()
 
+        ctk.set_appearance_mode("dark")
+
         self.title_text = f"CamelGram {app.settings.version}"
         self.title(self.title_text)
         self.geometry("1000x600")
