@@ -26,25 +26,18 @@ class WebSocketClient:
                 user = AccountData(user_id=body["sender_id"], display_name=body["display_name"],
                                    username=body["username"])
 
-                (AppContext.main_window.
-                 chat_window.handle_new_message(text=body["message"], message_id=body["message_id"],
-                                                user=user, timestamp=body["timestamp"],
-                                                status=MessageStatus(body["status"]), user_id=body["sender_id"]))
+                AppContext.main_window.chat_window.handle_new_message(
+                    text=body["message"], message_id=body["message_id"], user=user, timestamp=body["timestamp"],
+                    status=MessageStatus(body["status"]), user_id=body["sender_id"])
             case "message_ack":
-                print(body)
-                (AppContext.main_window.
-                 chat_window.change_message_status(sender_id=body["sender_id"], message_id=body["message_id"],
-                                                   status=MessageStatus.RECEIVED, timestamp=body["timestamp"],
-                                                   temp_id=body["temp_id"]))
+                AppContext.main_window.chat_window.change_message_status(
+                    user_id=body["receiver_id"], message_id=body["message_id"], status=MessageStatus.RECEIVED,
+                    timestamp=body["timestamp"], temp_id=body["temp_id"])
             case "messages_read":
-                print(body)
                 for msg in AppContext.main_window.chat_window.messages_cache[body["reader_id"]].messages().values():
-                    if (msg.sender_id != body["reader_id"] and isinstance(msg.message_id, int)
-                            and msg.message_id <= body["message_id"]):
-                        (AppContext.main_window.
-                         chat_window.change_message_status(message_id=msg.message_id, status=MessageStatus.READ,
-                                                           sender_id=body["reader_id"]))
-
+                    if msg.sender_id != body["reader_id"]:
+                        AppContext.main_window.chat_window.change_message_status(
+                            message_id=msg.message_id, status=MessageStatus.READ, user_id=body["reader_id"])
                     if msg.message_id == body["message_id"]:
                         break
             case _:

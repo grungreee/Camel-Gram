@@ -192,9 +192,9 @@ class ChatWindow(ctk.CTkFrame):
                                        fg_color="transparent", corner_radius=0,
                                        border_width=0, scrollbar_button_color="#444444",
                                        scrollbar_button_hover_color="#545454")
+        frame.pack(fill=ctk.BOTH, expand=True)
         # noinspection PyProtectedMember
         frame._scrollbar.configure(width=13)
-        frame.pack(fill=ctk.BOTH, expand=True)
         self.chat_list_frame = frame
 
         frames: list[ctk.CTkFrame] = []
@@ -570,27 +570,28 @@ class ChatWindow(ctk.CTkFrame):
 
         threading.Thread(target=after_threads).start()
 
-    def change_message_status(self, message_id: int, status: MessageStatus, sender_id: int,
+    def change_message_status(self, message_id: int, status: MessageStatus, user_id: int,
                               timestamp: str | None = None, temp_id: str | None = None) -> None:
         if status == MessageStatus.RECEIVED:
-            self.messages_cache[sender_id].messages[temp_id].status = status
-            self.messages_cache[sender_id].messages[temp_id].timestamp = timestamp
+            self.messages_cache[user_id].messages[temp_id].status = status
+            self.messages_cache[user_id].messages[temp_id].timestamp = timestamp
 
-            self.messages_cache[sender_id].messages.add_new(message_id,
-                                                            self.messages_cache[sender_id].messages[temp_id])
-            self.messages_cache[sender_id].messages.pop_by_id(temp_id)
+            self.messages_cache[user_id].messages.add_new(message_id,
+                                                          self.messages_cache[user_id].messages[temp_id])
+            self.messages_cache[user_id].messages.pop_by_id(temp_id)
         elif status == MessageStatus.READ:
-            self.messages_cache[sender_id].messages[message_id].status = status
+            self.messages_cache[user_id].messages[message_id].status = status
 
-        if self.messages_cache[sender_id].messages[message_id].status_label.winfo_exists():
+        if self.messages_cache[user_id].messages[message_id].status_label.winfo_exists():
             image = ctk.CTkImage(light_image=Image.open(f"app/assets/icons/{status.value}.png"), size=(12, 12))
-            self.messages_cache[sender_id].messages[message_id].status_label.configure(image=image)
+            self.messages_cache[user_id].messages[message_id].status_label.configure(image=image)
 
             if status == MessageStatus.RECEIVED:
-                self.messages_cache[sender_id].messages[message_id].timestamp_label.configure(text=iso_to_hm(timestamp))
+                self.messages_cache[user_id].messages[message_id].timestamp_label.configure(text=iso_to_hm(timestamp))
 
     @staticmethod
     def clear_frame(frame: ctk.CTkFrame | ctk.CTkScrollableFrame | None) -> None:
-        for widget in frame.winfo_children():
-            if widget.winfo_exists() and frame.winfo_exists():
-                widget.destroy()
+        if frame is not None and frame.winfo_exists():
+            for widget in frame.winfo_children():
+                if widget.winfo_exists() and frame.winfo_exists():
+                    widget.destroy()

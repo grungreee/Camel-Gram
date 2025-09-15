@@ -1,3 +1,4 @@
+import tkinter
 import customtkinter as ctk
 import app.settings
 from app.gui.windows.auth_window import AuthWindow
@@ -47,4 +48,7 @@ class MainRoot(ctk.CTk):
 
     def clear_window(self):
         for widget in self.winfo_children():
-            widget.destroy()
+            try:
+                widget.destroy()
+            except tkinter.TclError:
+                pass
