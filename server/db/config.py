@@ -10,6 +10,10 @@ class Settings(BaseSettings):
     EMAIL_NAME: str
     EMAIL_PASS: str
     JWT_KEY: str
+    REDIS_URL: str | None = None
+    API_URL: str = "http://localhost:8000"
+    LOCAL: bool = False
+    TEST: bool = False
 
     @property
     def database_url_asyncpg(self) -> str:

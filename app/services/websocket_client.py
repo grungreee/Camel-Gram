@@ -12,7 +12,7 @@ class WebSocketClient:
     def __init__(self) -> None:
 
         self.ws = WebSocketApp(
-            url=f"ws://{app.settings.url}/ws?token={get_validation_key()}",
+            url=f"{app.settings.WS_URL}/ws?token={get_validation_key()}",
             on_message=self.on_message,
             on_error=lambda _, *args: print(*args)
         )

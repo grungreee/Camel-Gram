@@ -24,7 +24,7 @@ def make_request(method: Literal["get", "post"], endpoint: str, data: dict | Non
         headers: dict | None = None
 
     try:
-        url: str = f"http://{app.settings.url}/{endpoint}"
+        url: str = f"{app.settings.API_URL}/{endpoint}"
         response: rq.Response = rq.post(url, json=data, headers=headers) if method == "post" else (
             rq.get(url, headers=headers, params=data))
 
