@@ -10,3 +10,4 @@ redis
 fastapi[standard]
 python-dotenv
 aiosmtplib
+python-jose[cryptography]
